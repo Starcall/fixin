@@ -17,8 +17,7 @@ public:
     /*
     * Tokenizer methods
     */
-    std::unique_ptr<BaseToken> PeekToken() const override;
-    std::unique_ptr<BaseToken> RendToken() override;
+    std::unique_ptr<BaseToken> ReadToken() override;
     bool IsLastToken() const override;
     /**/
 };

@@ -10,9 +10,9 @@ Reader::Reader(std::string const& filePath)
     m_logger.log(Logger::LogLevel::Info, "Reader(), stream is open = " + std::to_string(m_stream->is_open()));
 }
 
-// since we modify EOFReached it is not const function
 bool Reader::PeekByte(Byte& byte) const
 {
+    // TODO is it really needed?
     if (!m_stream || !m_stream->is_open())
     {
         return false;

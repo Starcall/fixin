@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "../utils/Logger.hpp"
+
 namespace pcap_parser
 {
 
@@ -12,6 +14,8 @@ using Byte = unsigned char;
 class Reader 
 {
 public:
+
+    Reader() = default;
     /*
     * Constructor from a filepath. Creates shared ptr to stream 
     * @param filepath is a path to create stream with
@@ -30,12 +34,6 @@ public:
     * Look at many bytes from the input stream
     * @param k a number of bytes to look at
     * @param bytes a vector to store bytes
-    * @return success status
-    */
-    bool PeekBytes(size_t k, std::vector<Byte>& bytes) const;
-
-    /*
-    * Read one byte from the input stream to a variable
     * @return success status
     */
     bool ReadByte(Byte& byte);
@@ -58,7 +56,7 @@ public:
 
 private:
     std::shared_ptr<std::ifstream> m_stream;
-    bool m_EOFReached = false;
+    Logger m_logger = Logger("Reader.log");
 };
 
 
