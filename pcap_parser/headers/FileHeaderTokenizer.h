@@ -5,8 +5,8 @@
 namespace pcap_parser
 {
 
-const size_t TOKEN_IDENTITY_SIZE = 7;
-enum TokenIdentity
+const size_t HEADER_TOKEN_IDENTITY_SIZE = 7;
+enum HeaderTokenIdentity
 {
     MagicNumber,
     Versions,
@@ -14,25 +14,25 @@ enum TokenIdentity
     Reserved2,
     SnapLen,
     LinkType,
-    None
+    HeaderNone
 };
 
 class FileHeaderToken : public BaseToken
 {
 public:
     FileHeaderToken() : BaseToken() {}
-    FileHeaderToken(uint32_t tokenValue, TokenIdentity tokenIdentity) 
-        : m_tokenValue(tokenValue), m_tokenIdentity(tokenIdentity)
+    FileHeaderToken(uint32_t tokenValue, HeaderTokenIdentity tokenIdentity) : 
+        BaseToken(tokenValue),
+        m_tokenIdentity(tokenIdentity)
     {}
-    uint32_t m_tokenValue = 0;
-    TokenIdentity m_tokenIdentity = TokenIdentity::None;
+    HeaderTokenIdentity m_tokenIdentity = HeaderTokenIdentity::HeaderNone;
 };
 
 class FileHeaderTokenizer : public Tokenizer
 {
 
 public:
-    FileHeaderTokenizer(std::string const& filepath);
+    FileHeaderTokenizer(std::shared_ptr<std::ifstream> fileStream);
 
     /*
     * Tokenizer methods
@@ -40,7 +40,7 @@ public:
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
     /**/
-    TokenIdentity m_lastTokenIdentity = TokenIdentity::None;
+    HeaderTokenIdentity m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
 
     ~FileHeaderTokenizer();
 };

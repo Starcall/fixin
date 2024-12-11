@@ -8,7 +8,6 @@
 
 namespace pcap_parser
 {
-
 using Byte = unsigned char;
 
 class Reader 
@@ -17,10 +16,11 @@ public:
 
     Reader() = default;
     /*
-    * Constructor from a filepath. Creates shared ptr to stream 
-    * @param filepath is a path to create stream with
+    * Constructor from a filestream. coping ownership of shared ptr to the stream 
+    * @param filepath is a shared pointer to stream 
     */
-    Reader(std::string const& filePath);
+    Reader(std::shared_ptr<std::ifstream> fileStream);
+
 
     
     /*
@@ -58,7 +58,6 @@ private:
     std::shared_ptr<std::ifstream> m_stream;
     Logger m_logger = Logger("Reader.log");
 };
-
 
 
 } // namespace pcap_parser

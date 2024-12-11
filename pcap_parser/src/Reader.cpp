@@ -3,10 +3,8 @@
 namespace pcap_parser
 {
 
-Reader::Reader(std::string const& filePath)
+Reader::Reader(std::shared_ptr<std::ifstream> fileStream) : m_stream(fileStream)
 {
-    m_logger.log(Logger::LogLevel::Info, "Reader() " + filePath);
-    m_stream = std::make_shared<std::ifstream>(filePath, std::ios::binary);
     m_logger.log(Logger::LogLevel::Info, "Reader(), stream is open = " + std::to_string(m_stream->is_open()));
 }
 
