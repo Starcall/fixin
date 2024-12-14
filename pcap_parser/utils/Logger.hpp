@@ -7,6 +7,8 @@
 #include <chrono>
 #include <ctime>
 
+namespace pcap_parser
+{
 class Logger 
 {
 public:
@@ -72,3 +74,4 @@ private:
     bool logToFile = false;
     std::ofstream logFile;
 };
+} // namespace pcap_parser

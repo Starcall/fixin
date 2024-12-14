@@ -5,7 +5,6 @@ namespace pcap_parser
 
 Reader::Reader(std::shared_ptr<std::ifstream> fileStream) : m_stream(fileStream)
 {
-    m_logger.log(Logger::LogLevel::Info, "Reader(), stream is open = " + std::to_string(m_stream->is_open()));
 }
 
 bool Reader::PeekByte(Byte& byte) const
@@ -26,10 +25,8 @@ bool Reader::PeekByte(Byte& byte) const
 
 bool Reader::ReadByte(Byte& byte)
 {
-    m_logger.log(Logger::LogLevel::Info, "ReadByte()");
     auto rc = PeekByte(byte);
 
-    m_logger.log(Logger::LogLevel::Info, "ReadByte(), rc is " + std::to_string(rc));
     if (!rc) 
     {
         return false;

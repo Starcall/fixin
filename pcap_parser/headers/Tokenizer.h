@@ -15,12 +15,26 @@ public:
         NothingToRead,
         Tail
     };
+    Tokenizer() = default;
     /*
     * Become a new owner of a stream 
     * @param filepath is a path to pcap file
     */
     Tokenizer(std::shared_ptr<std::ifstream> fileStream) : m_reader(fileStream)
     {}
+
+    Tokenizer(Tokenizer&& other) noexcept
+    {
+        m_reader = std::move(other.m_reader);
+    }
+    Tokenizer& operator=(Tokenizer&& other) noexcept
+    {
+        if (this != &other)
+        {
+            m_reader = std::move(other.m_reader);
+        }
+        return *this;
+    }
     /*
     * Read at one token from the input stream and store it in pointer
     * @return read success
@@ -32,8 +46,12 @@ public:
     */
     virtual bool IsLastToken() const = 0;
 
-
-    ValueStatus GetValue(uint32_t &value)
+    virtual ~Tokenizer() {};
+protected:
+    /*
+    * try read 4 bytes, read as much we have
+    */
+    ValueStatus GetValue4Bytes(uint32_t &value)
     {
         std::vector<Byte> bytesToRead;
         if (!m_reader.ReadBytes(4, bytesToRead))
@@ -52,8 +70,6 @@ public:
         return ValueStatus::Ok;
     }
 
-    virtual ~Tokenizer() {};
-protected:
     Reader m_reader;
 };
 } // namespace pcap_parser

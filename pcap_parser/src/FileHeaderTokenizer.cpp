@@ -10,7 +10,7 @@ namespace pcap_parser
     bool FileHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken>& token)
     {
         uint32_t value = 0;
-        if (GetValue(value) != ValueStatus::Ok)
+        if (GetValue4Bytes(value) != ValueStatus::Ok)
         {
             return false;
         }

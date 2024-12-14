@@ -17,6 +17,9 @@ enum HeaderTokenIdentity
     HeaderNone
 };
 
+/*
+* Consider one token as a full raw data in this case
+*/
 class FileHeaderToken : public BaseToken
 {
 public:
@@ -32,17 +35,34 @@ class FileHeaderTokenizer : public Tokenizer
 {
 
 public:
+    FileHeaderTokenizer() : Tokenizer()
+    {
+        m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
+    }
     FileHeaderTokenizer(std::shared_ptr<std::ifstream> fileStream);
-
+    FileHeaderTokenizer(FileHeaderTokenizer&& other) noexcept : Tokenizer(std::move(other))
+    {
+        m_lastTokenIdentity = other.m_lastTokenIdentity;
+    }
+    FileHeaderTokenizer& operator=(FileHeaderTokenizer&& other) noexcept
+    {
+        if (this != &other)
+        {
+            Tokenizer::operator=(std::move(other));
+            m_lastTokenIdentity = other.m_lastTokenIdentity;
+        }
+        return *this;
+    }
     /*
     * Tokenizer methods
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
     /**/
-    HeaderTokenIdentity m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
 
     ~FileHeaderTokenizer();
+private:
+    HeaderTokenIdentity m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
 };
     
 } // namespace pcap_parser
