@@ -26,6 +26,11 @@ namespace pcap_parser
         return m_lastTokenIdentity == HeaderTokenIdentity::LinkType;
     }
 
+    void FileHeaderTokenizer::ResetTerminal()
+    {
+        m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
+    }
+
     FileHeaderTokenizer::~FileHeaderTokenizer() 
     {
     }

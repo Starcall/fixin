@@ -1,21 +1,11 @@
 #pragma once
 
+#include "Enums.h"
 #include "Tokenizer.h"
+
 
 namespace pcap_parser
 {
-
-const size_t HEADER_TOKEN_IDENTITY_SIZE = 7;
-enum HeaderTokenIdentity
-{
-    MagicNumber,
-    Versions,
-    Reserved1,
-    Reserved2,
-    SnapLen,
-    LinkType,
-    HeaderNone
-};
 
 /*
 * Consider one token as a full raw data in this case
@@ -58,6 +48,7 @@ public:
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
+    void ResetTerminal() override;
     /**/
 
     ~FileHeaderTokenizer();

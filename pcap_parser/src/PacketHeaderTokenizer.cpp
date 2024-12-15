@@ -30,6 +30,11 @@ namespace pcap_parser
         return m_lastTokenIdentity == PacketTokenIdentity::OriginalLength;
     }
 
+    void PacketHeaderTokenizer::ResetTerminal()
+    {
+        m_lastTokenIdentity = PacketTokenIdentity::PacketNone;
+    }
+
     PacketHeaderTokenizer::~PacketHeaderTokenizer()
     {
     }

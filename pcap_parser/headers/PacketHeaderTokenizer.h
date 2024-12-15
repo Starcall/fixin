@@ -1,18 +1,11 @@
 #pragma once
 
+#include "Enums.h"
 #include "Tokenizer.h"
 
 namespace pcap_parser
 {
-const size_t PACKET_TOKEN_IDENTITY_SIZE = 5;
-enum PacketTokenIdentity
-{
-    Seconds,
-    SideSeconds,
-    CapturedLength,
-    OriginalLength,
-    PacketNone
-};
+
 class PacketHeaderToken : public BaseToken
 {
 public:
@@ -51,6 +44,7 @@ public:
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
+    void ResetTerminal() override;
     /**/
     ~PacketHeaderTokenizer();
 private:

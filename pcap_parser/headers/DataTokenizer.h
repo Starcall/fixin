@@ -60,10 +60,12 @@ public:
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
+    void ResetTerminal() override;
     /**/
     ~DataTokenizer();  
 private:
     size_t m_length = 0;
+    bool m_isTerminal = false;
 };
 
 } // namespace pcap_parser

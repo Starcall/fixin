@@ -98,13 +98,20 @@ void BasicTesting()
 
 int main()
 {
-    ParserPCAP parser("./test/two_headers.pcap");
-    FileHeaderValues values;
-    auto rc = parser.ParseFileHeader(values);
+    ParserPCAP parser("./ignore/2023-10-09.1849-1906.pcap");
+    FileHeaderValues fileHeaderValues;
+    auto rc = parser.ParseFileHeader(fileHeaderValues);
 
     if (rc)
     {
-        std::cout << values;
+        std::cout << fileHeaderValues;
+    }
+    PacketHeaderValues packetHeaderValues;
+    while (parser.ParsePacketHeader(packetHeaderValues, fileHeaderValues))
+    {
+        PacketDataValues packetDataValues;
+        auto s = parser.ParsePacketData(packetDataValues, packetHeaderValues, fileHeaderValues);
+        parser.ResetTokenizersTerminals();
     }
     return 0;
 }

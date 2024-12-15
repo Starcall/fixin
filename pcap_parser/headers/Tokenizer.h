@@ -1,20 +1,17 @@
 #pragma once
-#include "Reader.h"
+
 #include "BaseToken.h"
+#include "Enums.h"
+#include "Reader.h"
 
 namespace pcap_parser
 {
 //TODO remove reader methods from tokenizer
-class Tokenizer : public Reader
+class Tokenizer
 {
 
 public:
-    enum ValueStatus
-    {
-        Ok,
-        NothingToRead,
-        Tail
-    };
+
     Tokenizer() = default;
     /*
     * Become a new owner of a stream 
@@ -45,6 +42,12 @@ public:
     * Check if the tokenizer reached its last token
     */
     virtual bool IsLastToken() const = 0;
+
+    /*
+    * Reset state before parsing new token
+    * IsLastToken -> false
+    */
+    virtual void ResetTerminal() = 0;
 
     virtual ~Tokenizer() {};
 protected:

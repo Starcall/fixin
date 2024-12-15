@@ -20,7 +20,6 @@ namespace pcap_parser
             uint32_t value = 0;
             if (GetValue4Bytes(value) != ValueStatus::Ok)
             {
-                // TODO insert log
                 return false;
             }
             bytesLeft -= 4;
@@ -28,7 +27,7 @@ namespace pcap_parser
         }
         if (bytesLeft)
         {
-            auto rc = ReadBytes(bytesLeft, tail);
+            auto rc = m_reader.ReadBytes(bytesLeft, tail);
             if (!rc)
             {
                 // TODO insert log
@@ -37,12 +36,19 @@ namespace pcap_parser
         }
         // Could optimize, remove copying
         token = std::make_unique<DataToken>(DataToken(baseTokens, tail));
+        m_isTerminal = true;
         return true;
     }
 
+    // 
     bool DataTokenizer::IsLastToken() const
     {
-        return true;
+        return m_isTerminal;
+    }
+
+    void DataTokenizer::ResetTerminal()
+    {
+        m_isTerminal = false;
     }
 
     DataTokenizer::~DataTokenizer()
