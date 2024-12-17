@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Enums.h"
+#include "include/Enums.h"
+#include "include/Values.h"
 #include "DataTokenizer.h"
 #include "FileHeaderTokenizer.h"
 #include "PacketHeaderTokenizer.h"
-#include "Values.h"
 
 namespace pcap_parser
 {
@@ -25,8 +25,6 @@ public:
 public:
     bool ParseFileHeader(FileHeaderValues &parsedValues);
     bool ParsePacketHeader(PacketHeaderValues &parsedValues, FileHeaderValues const& metadata);
-    
-    // Note that we read bytes raw, not converting it from big endian to little endian
     bool ParsePacketData(PacketDataValues &parsedValues, PacketHeaderValues const& packetMetadata, FileHeaderValues const& fileMetadata);
 
     std::string m_fileName;

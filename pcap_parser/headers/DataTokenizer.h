@@ -1,6 +1,6 @@
 #pragma once
-#include "BaseToken.h"
-#include "Tokenizer.h"
+#include "include/BaseToken.h"
+#include "include/Tokenizer.h"
 
 namespace pcap_parser
 {
@@ -56,12 +56,13 @@ public:
     void SetDataLength(size_t lengthInBytes);
 
     /*
-    * Tokenizer methods
+    * BaseTokenizer methods
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
     void ResetTerminal() override;
     /**/
+    
     ~DataTokenizer();  
 private:
     size_t m_length = 0;

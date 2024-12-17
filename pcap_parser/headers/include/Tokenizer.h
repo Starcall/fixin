@@ -1,13 +1,14 @@
 #pragma once
 
 #include "BaseToken.h"
+#include "BaseTokenizer.h"
 #include "Enums.h"
 #include "Reader.h"
 
 namespace pcap_parser
 {
 //TODO remove reader methods from tokenizer
-class Tokenizer
+class Tokenizer : BaseTokenizer
 {
 
 public:
@@ -32,45 +33,29 @@ public:
         }
         return *this;
     }
-    /*
-    * Read at one token from the input stream and store it in pointer
-    * @return read success
-    */
-    virtual bool ReadToken(std::unique_ptr<BaseToken>&) = 0;
-
-    /*
-    * Check if the tokenizer reached its last token
-    */
-    virtual bool IsLastToken() const = 0;
-
-    /*
-    * Reset state before parsing new token
-    * IsLastToken -> false
-    */
-    virtual void ResetTerminal() = 0;
 
     virtual ~Tokenizer() {};
 protected:
     /*
     * try read 4 bytes, read as much we have
     */
-    ValueStatus GetValue4Bytes(uint32_t &value)
+    enums::ValueStatus GetValue4Bytes(uint32_t &value)
     {
         std::vector<Byte> bytesToRead;
         if (!m_reader.ReadBytes(4, bytesToRead))
         {
-            return ValueStatus::NothingToRead;
+            return enums::ValueStatus::NothingToRead;
         }
         if (bytesToRead.size() != 4)
         {
-            return ValueStatus::Tail;
+            return enums::ValueStatus::Tail;
         }
         for (auto byte : bytesToRead)
         {
-            value *= 256;
+            value <<= 8;
             value += byte;
         }
-        return ValueStatus::Ok;
+        return enums::ValueStatus::Ok;
     }
 
     Reader m_reader;

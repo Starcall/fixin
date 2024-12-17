@@ -15,11 +15,11 @@ namespace pcap_parser
     bool PacketHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken> &token)
     {        
         uint32_t value = 0;
-        if (GetValue4Bytes(value) != ValueStatus::Ok)
+        if (GetValue4Bytes(value) != enums::ValueStatus::Ok)
         {
             return false;
         }
-        PacketTokenIdentity identity = static_cast<PacketTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % PACKET_TOKEN_IDENTITY_SIZE);
+        enums::PacketTokenIdentity identity = static_cast<enums::PacketTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % enums::PACKET_TOKEN_IDENTITY_SIZE);
         m_lastTokenIdentity = identity;
         token = std::make_unique<PacketHeaderToken>(PacketHeaderToken(value, identity));
         return true;
@@ -27,12 +27,12 @@ namespace pcap_parser
 
     bool PacketHeaderTokenizer::IsLastToken() const
     {
-        return m_lastTokenIdentity == PacketTokenIdentity::OriginalLength;
+        return m_lastTokenIdentity == enums::PacketTokenIdentity::OriginalLength;
     }
 
     void PacketHeaderTokenizer::ResetTerminal()
     {
-        m_lastTokenIdentity = PacketTokenIdentity::PacketNone;
+        m_lastTokenIdentity = enums::PacketTokenIdentity::PacketNone;
     }
 
     PacketHeaderTokenizer::~PacketHeaderTokenizer()

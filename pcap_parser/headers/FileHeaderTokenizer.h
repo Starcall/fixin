@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Enums.h"
-#include "Tokenizer.h"
+#include "include/Enums.h"
+#include "include/Tokenizer.h"
 
 
 namespace pcap_parser
@@ -14,11 +14,11 @@ class FileHeaderToken : public BaseToken
 {
 public:
     FileHeaderToken() : BaseToken() {}
-    FileHeaderToken(uint32_t tokenValue, HeaderTokenIdentity tokenIdentity) : 
+    FileHeaderToken(uint32_t tokenValue, enums::HeaderTokenIdentity tokenIdentity) : 
         BaseToken(tokenValue),
         m_tokenIdentity(tokenIdentity)
     {}
-    HeaderTokenIdentity m_tokenIdentity = HeaderTokenIdentity::HeaderNone;
+    enums::HeaderTokenIdentity m_tokenIdentity = enums::HeaderTokenIdentity::HeaderNone;
 };
 
 class FileHeaderTokenizer : public Tokenizer
@@ -27,7 +27,7 @@ class FileHeaderTokenizer : public Tokenizer
 public:
     FileHeaderTokenizer() : Tokenizer()
     {
-        m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
+        m_lastTokenIdentity = enums::HeaderTokenIdentity::HeaderNone;
     }
     FileHeaderTokenizer(std::shared_ptr<std::ifstream> fileStream);
     FileHeaderTokenizer(FileHeaderTokenizer&& other) noexcept : Tokenizer(std::move(other))
@@ -44,7 +44,7 @@ public:
         return *this;
     }
     /*
-    * Tokenizer methods
+    * BaseTokenizer methods
     */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
     bool IsLastToken() const override;
@@ -53,7 +53,7 @@ public:
 
     ~FileHeaderTokenizer();
 private:
-    HeaderTokenIdentity m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
+    enums::HeaderTokenIdentity m_lastTokenIdentity = enums::HeaderTokenIdentity::HeaderNone;
 };
     
 } // namespace pcap_parser

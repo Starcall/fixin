@@ -10,12 +10,12 @@ namespace pcap_parser
     bool FileHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken>& token)
     {
         uint32_t value = 0;
-        if (GetValue4Bytes(value) != ValueStatus::Ok)
+        if (GetValue4Bytes(value) != enums::ValueStatus::Ok)
         {
             return false;
         }
-        HeaderTokenIdentity identity;
-        identity = static_cast<HeaderTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % HEADER_TOKEN_IDENTITY_SIZE);
+        enums::HeaderTokenIdentity identity;
+        identity = static_cast<enums::HeaderTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % enums::HEADER_TOKEN_IDENTITY_SIZE);
         m_lastTokenIdentity = identity;
         token = std::make_unique<FileHeaderToken>(FileHeaderToken(value, identity));
         return true;
@@ -23,12 +23,12 @@ namespace pcap_parser
 
     bool FileHeaderTokenizer::IsLastToken() const
     {
-        return m_lastTokenIdentity == HeaderTokenIdentity::LinkType;
+        return m_lastTokenIdentity == enums::HeaderTokenIdentity::LinkType;
     }
 
     void FileHeaderTokenizer::ResetTerminal()
     {
-        m_lastTokenIdentity = HeaderTokenIdentity::HeaderNone;
+        m_lastTokenIdentity = enums::HeaderTokenIdentity::HeaderNone;
     }
 
     FileHeaderTokenizer::~FileHeaderTokenizer() 

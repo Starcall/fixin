@@ -3,6 +3,8 @@
 
 namespace pcap_parser
 {
+namespace enums
+{
 const size_t HEADER_TOKEN_IDENTITY_SIZE = 7;
 enum HeaderTokenIdentity
 {
@@ -25,6 +27,15 @@ enum PacketTokenIdentity
     PacketNone
 };
 
+const size_t ETHERNET_TOKEN_IDENTITY_SIZE = 4;
+enum EthernetTokenIdentity
+{
+    DestinationMac,
+    SourceMac,
+    Type,
+    EthernetNone
+};
+
 enum Endian
 {
     BigEndian,
@@ -38,5 +49,5 @@ enum ValueStatus
     NothingToRead,
     Tail
 };
-
+} // namespace enums
 } // namespace pcap_parser

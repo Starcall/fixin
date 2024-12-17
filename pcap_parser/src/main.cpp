@@ -3,8 +3,11 @@
 #include "PacketHeaderTokenizer.h"
 #include "DataTokenizer.h"
 #include "ParserPCAP.h"
+#include "data_parser/DataParser.h"
+#include "include/Values.h"
 
 using namespace pcap_parser;
+using namespace pcap_parser::data_parser;
 
 
 void GenerateHexText(std::string const& filepath, std::vector<Byte> const& values)
@@ -72,7 +75,7 @@ void BasicTesting()
                 std::to_string(packetToken.m_tokenIdentity));
             logger.log(Logger::LogLevel::Info, "main() packetTokenizerTest value =  " + 
                 std::to_string(packetToken.m_tokenValue));
-            if (packetToken.m_tokenIdentity == PacketTokenIdentity::CapturedLength)
+            if (packetToken.m_tokenIdentity == enums::CapturedLength)
             {
                 dataSize = __builtin_bswap32(packetToken.m_tokenValue);
                 logger.log(Logger::LogLevel::Info, "data size is : " + std::to_string(dataSize));
@@ -111,7 +114,16 @@ int main()
     {
         PacketDataValues packetDataValues;
         auto s = parser.ParsePacketData(packetDataValues, packetHeaderValues, fileHeaderValues);
+        std::cout << packetDataValues;
+        data_parser::DataParser dataParser = data_parser::DataParser(fileHeaderValues, packetDataValues);
+        std::unique_ptr<BasicProtocolValues> parsedProtocolData;
+        auto rc = dataParser.ParseData(parsedProtocolData);
+        std::cout << rc << "\n";
+        std::unique_ptr<EthernetDataValues> ethernetDataValues = std::unique_ptr<EthernetDataValues>(dynamic_cast<EthernetDataValues*>(parsedProtocolData.release()));
+        std::cout << *ethernetDataValues.get();
+
         parser.ResetTokenizersTerminals();
+        break;
     }
     return 0;
 }

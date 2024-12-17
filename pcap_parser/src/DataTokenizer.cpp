@@ -18,7 +18,7 @@ namespace pcap_parser
         while (bytesLeft >= 4)
         {
             uint32_t value = 0;
-            if (GetValue4Bytes(value) != ValueStatus::Ok)
+            if (GetValue4Bytes(value) != enums::ValueStatus::Ok)
             {
                 return false;
             }
