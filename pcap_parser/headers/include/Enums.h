@@ -27,13 +27,32 @@ enum PacketTokenIdentity
     PacketNone
 };
 
-const size_t ETHERNET_TOKEN_IDENTITY_SIZE = 4;
-enum EthernetTokenIdentity
+const size_t ETHERNET_HEADER_TOKEN_IDENTITY_SIZE = 4;
+enum EthernetHeaderTokenIdentity
 {
     DestinationMac,
     SourceMac,
     Type,
     EthernetNone
+};
+
+const size_t IPV4_HEADER_TOKEN_IDENTITY_SIZE = 14;
+enum IPv4HeaderTokenIdentity
+{
+    Version,
+    IHL,
+    TypeOfService,
+    TotalLength,
+    Identification,
+    Flags,
+    FragmentOffset,
+    TTL,
+    Protocol,
+    Checksum,
+    SourceIP,
+    DestinationIp,
+    Options,
+    IPv4None
 };
 
 enum Endian

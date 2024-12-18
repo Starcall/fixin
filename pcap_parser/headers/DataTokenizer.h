@@ -23,6 +23,7 @@ public:
         m_tail = std::move(otherToken.m_tail);
     }
     // we assume here that data is not that big in our case so we can store it in memory 
+    // it is useless to store 4bytes values here, but I ve realized it later :x
     std::vector<BaseToken> m_4BytesValues;
     std::vector<Byte> m_tail;
 };
@@ -62,7 +63,7 @@ public:
     bool IsLastToken() const override;
     void ResetTerminal() override;
     /**/
-    
+
     ~DataTokenizer();  
 private:
     size_t m_length = 0;

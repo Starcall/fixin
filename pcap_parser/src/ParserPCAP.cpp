@@ -112,13 +112,13 @@ bool ParserPCAP::ParseFileHeader(FileHeaderValues &parsedValues)
                 const uint32_t NANOSECONDS_VALUE = 0xA1B23C4D;
                 if (value == MICROSECONDS_VALUE || value == NANOSECONDS_VALUE)
                 {
-                    parsedValues.EndianType = enums::Endian::LittleEndian;
+                    parsedValues.EndianType = enums::Endian::BigEndian;
                     parsedValues.MagicNumber = value;
                 }
                 else
                 if (__builtin_bswap32(value) == MICROSECONDS_VALUE || __builtin_bswap32(value) == NANOSECONDS_VALUE)
                 {
-                    parsedValues.EndianType = enums::Endian::BigEndian;
+                    parsedValues.EndianType = enums::Endian::LittleEndian;
                     parsedValues.MagicNumber = __builtin_bswap32(value);
                 }
                 else
@@ -135,8 +135,9 @@ bool ParserPCAP::ParseFileHeader(FileHeaderValues &parsedValues)
                     m_logger.log(Logger::LogLevel::Error, "Cannot define endian of the system to parse header");
                     return false;
                 }
-                if (parsedValues.EndianType == enums::Endian::BigEndian)
+                if (parsedValues.EndianType == enums::Endian::LittleEndian)
                 {
+                    // TODO double check how I receive versions
                     auto value = __builtin_bswap32(fileHeaderToken->m_tokenValue);
                     m_logger.log(Logger::LogLevel::Error, std::to_string(value));
                     
@@ -174,7 +175,7 @@ bool ParserPCAP::ParseFileHeader(FileHeaderValues &parsedValues)
                     return false;
                 }
                 int32_t value = 0;
-                if (parsedValues.EndianType == enums::Endian::BigEndian)
+                if (parsedValues.EndianType == enums::Endian::LittleEndian)
                 {
                     value = __builtin_bswap32(fileHeaderToken->m_tokenValue);
                 }
@@ -192,7 +193,7 @@ bool ParserPCAP::ParseFileHeader(FileHeaderValues &parsedValues)
                     return false;
                 }
                 int32_t value = 0;
-                if (parsedValues.EndianType == enums::Endian::BigEndian)
+                if (parsedValues.EndianType == enums::Endian::LittleEndian)
                 {
                     value = __builtin_bswap32(fileHeaderToken->m_tokenValue);
                 }
@@ -232,7 +233,7 @@ bool ParserPCAP::ParsePacketHeader(PacketHeaderValues &parsedValues, FileHeaderV
             m_logger.log(Logger::LogLevel::Error, "Cannot define endian of the system to parse header");
             return false;
         }
-        if (metadata.EndianType == enums::Endian::BigEndian)
+        if (metadata.EndianType == enums::Endian::LittleEndian)
         {
             value = __builtin_bswap32(packetHeaderToken->m_tokenValue);   
         }
@@ -272,10 +273,6 @@ bool ParserPCAP::ParsePacketHeader(PacketHeaderValues &parsedValues, FileHeaderV
 bool ParserPCAP::ParsePacketData(PacketDataValues &parsedValues, PacketHeaderValues const& packetMetadata, FileHeaderValues const& fileMetadata)
 {
     m_logger.log(Logger::LogLevel::Info, "ParsePacketData()");
-    if (fileMetadata.EndianType == enums::Endian::None)
-    {
-        m_logger.log(Logger::LogLevel::Error, "Cannot define endian of the system to parse header");
-    }
     m_dataTokenizer.SetDataLength(packetMetadata.CapturedLength);
     std::unique_ptr<BaseToken> token;
     auto rc = m_dataTokenizer.ReadToken(token); 
@@ -293,35 +290,15 @@ bool ParserPCAP::ParsePacketData(PacketDataValues &parsedValues, PacketHeaderVal
     //TODO Long operation? Optimize later? memcpy?
     for (auto const& BaseToken : dataToken->m_4BytesValues)
     {
-        if (fileMetadata.EndianType == enums::Endian::BigEndian)
-        {
-            parsedValues.values.push_back(__builtin_bswap32(BaseToken.m_tokenValue));
-        }
-        else
-        {
-            parsedValues.values.push_back(BaseToken.m_tokenValue);
-        }
+        // trick to allow reinterpret cast uint32 values in to uint8 data since we are on LE system
+        parsedValues.values.push_back(__builtin_bswap32(BaseToken.m_tokenValue));
     }
-    if (fileMetadata.EndianType == enums::Endian::BigEndian)
-    {
-        std::transform(dataToken->m_tail.begin(), dataToken->m_tail.end(), parsedValues.tail.begin(), [](uint32_t value)
-        {
-            return __builtin_bswap32(value);
-        });
-    }
-    else
-    {
-        parsedValues.tail = dataToken->m_tail;
-    }
+    parsedValues.tail = dataToken->m_tail;
     auto FCSvalue = (fileMetadata.LinkType >> 28);
     parsedValues.HasFCS = FCSvalue & 8;
     if (parsedValues.HasFCS)
     {
         parsedValues.FCSSize = static_cast<uint8_t>(fileMetadata.LinkType >> 29);
-        if (fileMetadata.EndianType == enums::Endian::BigEndian)
-        {
-            parsedValues.FCSSize = __builtin_bswap32(parsedValues.FCSSize);
-        }
     }
     return true;
 }

@@ -119,7 +119,7 @@ int main()
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
         auto rc = dataParser.ParseData(parsedProtocolData);
         std::cout << rc << "\n";
-        std::unique_ptr<EthernetDataValues> ethernetDataValues = std::unique_ptr<EthernetDataValues>(dynamic_cast<EthernetDataValues*>(parsedProtocolData.release()));
+        std::unique_ptr<EthernetIPv4HeaderValues> ethernetDataValues = std::unique_ptr<EthernetIPv4HeaderValues>(dynamic_cast<EthernetIPv4HeaderValues*>(parsedProtocolData.release()));
         std::cout << *ethernetDataValues.get();
 
         parser.ResetTokenizersTerminals();

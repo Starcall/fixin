@@ -39,6 +39,23 @@ struct PacketDataValues
     uint8_t FCSSize = 0;
 };
 
+struct IPv4HeaderValues
+{
+    uint8_t Version = 0;
+    uint8_t IHL = 0;
+    uint8_t TypeOfService = 0;
+    uint16_t TotalLength = 0;
+    uint16_t Identification = 0;
+    uint8_t Flags = 0;
+    uint16_t FragmentOffset = 0;
+    uint8_t TTL = 0;
+    uint8_t Protocol = 0;
+    uint16_t Checksum = 0;
+    uint32_t SourceIP = 0;
+    uint32_t DestinationIp = 0;
+    std::vector<uint8_t> Options;
+};
+
 struct BasicProtocolValues
 {
     BasicProtocolValues() = default;
@@ -49,18 +66,30 @@ struct BasicProtocolValues
 };
 
 
-struct EthernetDataValues : public BasicProtocolValues
+struct EthernetHeaderValues : public BasicProtocolValues
 {
-    EthernetDataValues() = default;
-    EthernetDataValues(EthernetDataValues const& other)
+    EthernetHeaderValues() = default;
+    EthernetHeaderValues(EthernetHeaderValues const& other)
         : BasicProtocolValues(other),
           DestinationMac(other.DestinationMac),
-          SourceMac(other.SourceMac),
-          Payload(other.Payload) 
+          SourceMac(other.SourceMac)
           {}
     std::array<Byte, 6> DestinationMac;
     std::array<Byte, 6> SourceMac;
-    std::vector<Byte> Payload;
 };
+
+struct EthernetIPv4HeaderValues : public EthernetHeaderValues
+{
+    EthernetIPv4HeaderValues() = default;
+    EthernetIPv4HeaderValues(const EthernetHeaderValues& other)
+        : EthernetHeaderValues(other)
+    {}
+    EthernetIPv4HeaderValues(EthernetIPv4HeaderValues const& other)
+        : EthernetHeaderValues(other),
+          ipv4HeaderValues(other.ipv4HeaderValues)
+          {}
+    IPv4HeaderValues ipv4HeaderValues;
+};
+
 
 } // namespace pcap_parser

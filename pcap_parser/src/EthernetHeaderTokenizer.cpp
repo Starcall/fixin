@@ -8,13 +8,13 @@ namespace data_parser
 bool EthernetHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken> &token)
 {
     std::array<uint8_t, 6> value;
-    enums::EthernetTokenIdentity identity = static_cast<enums::EthernetTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % enums::ETHERNET_TOKEN_IDENTITY_SIZE);
-    m_lastTokenIdentity = identity;
+    enums::EthernetHeaderTokenIdentity identity = static_cast<enums::EthernetHeaderTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % enums::ETHERNET_HEADER_TOKEN_IDENTITY_SIZE);
     
     // Number of bytes we did not process in mvalues
     int bytesLeft = static_cast<int>(m_values.size() * sizeof(uint32_t)) - m_position;
     bytesLeft = std::max(0, bytesLeft);
-    if (identity == enums::EthernetTokenIdentity::DestinationMac || identity == enums::EthernetTokenIdentity::SourceMac)
+    auto tailPosition = m_position - static_cast<int>(m_values.size() * sizeof(uint32_t));
+    if (identity == enums::EthernetHeaderTokenIdentity::DestinationMac || identity == enums::EthernetHeaderTokenIdentity::SourceMac)
     {
         if (!m_rawData)
         {
@@ -43,6 +43,7 @@ bool EthernetHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken> &token)
     }
     else
     {
+        // Cringe... It also not possible in correct file
         if (!m_rawData && m_tail.size() < 2)
         {
             return false;
@@ -70,27 +71,28 @@ bool EthernetHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken> &token)
         }
         else
         {
-            if (m_tail.size() < 2)
+            if (tailPosition + 1 >= m_tail.size())
             {
                 return false;
             }
-            value = (m_tail[0] << 8) + m_tail[1];
+            value = (m_tail[tailPosition] << 8) + m_tail[tailPosition + 1];
             
         }
         m_position += 2;
         token = std::make_unique<EthernetHeaderToken>(EthernetHeaderToken(value, identity));
     }
+    m_lastTokenIdentity = identity;
     return true;
 }
 
 bool EthernetHeaderTokenizer::IsLastToken() const
 {
-    return m_lastTokenIdentity == enums::EthernetTokenIdentity::Type;
+    return m_lastTokenIdentity == enums::EthernetHeaderTokenIdentity::Type;
 }
 
 void EthernetHeaderTokenizer::ResetTerminal()
 {
-    m_lastTokenIdentity = enums::EthernetTokenIdentity::EthernetNone;
+    m_lastTokenIdentity = enums::EthernetHeaderTokenIdentity::EthernetNone;
     m_rawData = nullptr;
     m_position = 0;
 }
