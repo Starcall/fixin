@@ -39,12 +39,10 @@ public:
 class EthernetHeaderTokenizer : public BaseTokenizer
 {
 public:
-    EthernetHeaderTokenizer(std::vector<uint32_t> const& values, std::vector<Byte> const& tail, size_t position = 0) 
+    EthernetHeaderTokenizer(std::vector<Byte> const& values, size_t position = 0) 
         : m_values(values), 
-          m_tail(tail),
           m_position(position)
     {
-        m_rawData = reinterpret_cast<const uint8_t*>(m_values.data());
         m_lastTokenIdentity = enums::EthernetHeaderTokenIdentity::EthernetNone;
     }
     /*
@@ -65,9 +63,7 @@ public:
 
     ~EthernetHeaderTokenizer() {}
 private:
-    const uint8_t* m_rawData; 
-    std::vector<uint32_t> const& m_values;
-    std::vector<Byte> const& m_tail;
+    std::vector<Byte> const& m_values;
     size_t m_position;
     
     enums::EthernetHeaderTokenIdentity m_lastTokenIdentity = enums::EthernetHeaderTokenIdentity::EthernetNone;

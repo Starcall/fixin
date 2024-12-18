@@ -2,6 +2,7 @@
 #include "include/Values.h"
 #include "EthernetHeaderTokenizer.h"
 #include "IPv4HeaderTokenizer.h"
+#include "UDPHeaderTokenizer.h"
 
 namespace pcap_parser
 {
@@ -11,6 +12,8 @@ namespace data_parser
 std::ostream& operator<<(std::ostream& os, const EthernetHeaderValues& data);
 std::ostream& operator<<(std::ostream& os, const IPv4HeaderValues& ipv4);
 std::ostream& operator<<(std::ostream& os, const EthernetIPv4HeaderValues& eth_ipv4);
+std::ostream& operator<<(std::ostream& os, const UPDHeaderValues& udp);
+std::ostream& operator<<(std::ostream& os, const EthernetIPv4UDPHeaderValues& eth_ipv4_udp);
 
 class DataParser
 {
@@ -30,6 +33,8 @@ private:
     // In case of this task I chose not to create ProtocolParser since we are parsing only EthernetProtocol
     bool ParseEthernetProtocolHeader(EthernetHeaderValues& parsedValues);
     bool ParseIPv4ProtocolHeader(IPv4HeaderValues& parsedValues);
+    bool ParseUDPHeader(UPDHeaderValues& parsedValues);
+
     FileHeaderValues const& m_fileMetadata;
     PacketDataValues const& m_data;
     size_t m_firstUnprocessed = 0;

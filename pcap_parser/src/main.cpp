@@ -1,7 +1,7 @@
 #include "Reader.h"
 #include "FileHeaderTokenizer.h"
 #include "PacketHeaderTokenizer.h"
-#include "DataTokenizer.h"
+#include "PacketDataTokenizer.h"
 #include "ParserPCAP.h"
 #include "data_parser/DataParser.h"
 #include "include/Values.h"
@@ -81,19 +81,15 @@ void BasicTesting()
                 logger.log(Logger::LogLevel::Info, "data size is : " + std::to_string(dataSize));
             }
         }
-        DataTokenizer dataTokenizer = DataTokenizer(tokenizerStream);
+        PacketDataTokenizer dataTokenizer = PacketDataTokenizer(tokenizerStream);
         dataTokenizer.SetDataLength(dataSize);
         std::unique_ptr<BaseToken> token;
         auto rc = dataTokenizer.ReadToken(token);
         logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest rc =  " + std::to_string(rc));
-        DataToken dataToken = *dynamic_cast<DataToken*>(token.get());
-        for (auto value : dataToken.m_4BytesValues)
+        PacketDataToken dataToken = *dynamic_cast<PacketDataToken*>(token.get());
+        for (auto value : dataToken.m_values)
         {
-            logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest value = " + std::to_string(value.m_tokenValue));
-        }
-        for (auto value : dataToken.m_tail)
-        {
-            logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest tail byte = " + std::to_string(value));
+            logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest value = " + std::to_string(value));
         }
         
     }
@@ -119,7 +115,7 @@ int main()
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
         auto rc = dataParser.ParseData(parsedProtocolData);
         std::cout << rc << "\n";
-        std::unique_ptr<EthernetIPv4HeaderValues> ethernetDataValues = std::unique_ptr<EthernetIPv4HeaderValues>(dynamic_cast<EthernetIPv4HeaderValues*>(parsedProtocolData.release()));
+        std::unique_ptr<EthernetIPv4UDPHeaderValues> ethernetDataValues = std::unique_ptr<EthernetIPv4UDPHeaderValues>(dynamic_cast<EthernetIPv4UDPHeaderValues*>(parsedProtocolData.release()));
         std::cout << *ethernetDataValues.get();
 
         parser.ResetTokenizersTerminals();

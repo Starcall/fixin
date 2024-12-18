@@ -33,8 +33,7 @@ struct PacketHeaderValues
 
 struct PacketDataValues
 {
-    std::vector<uint32_t> values;
-    std::vector<Byte> tail;
+    std::vector<Byte> Values;
     bool HasFCS = false;
     uint8_t FCSSize = 0;
 };
@@ -54,6 +53,14 @@ struct IPv4HeaderValues
     uint32_t SourceIP = 0;
     uint32_t DestinationIp = 0;
     std::vector<uint8_t> Options;
+};
+
+struct UPDHeaderValues
+{
+    uint16_t SourcePort;
+    uint16_t DestinationPort;
+    uint16_t Length;
+    uint16_t Checksum;
 };
 
 struct BasicProtocolValues
@@ -89,6 +96,20 @@ struct EthernetIPv4HeaderValues : public EthernetHeaderValues
           ipv4HeaderValues(other.ipv4HeaderValues)
           {}
     IPv4HeaderValues ipv4HeaderValues;
+};
+
+struct EthernetIPv4UDPHeaderValues : public EthernetIPv4HeaderValues
+{
+    EthernetIPv4UDPHeaderValues() = default;
+    EthernetIPv4UDPHeaderValues(const EthernetIPv4HeaderValues& other)
+        : EthernetIPv4HeaderValues(other)
+    {}
+    EthernetIPv4UDPHeaderValues(EthernetIPv4UDPHeaderValues const& other)
+        : EthernetIPv4HeaderValues(other),
+          udpValues(other.udpValues)
+    {}
+
+    UPDHeaderValues udpValues;
 };
 
 

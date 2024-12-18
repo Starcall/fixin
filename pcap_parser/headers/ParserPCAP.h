@@ -2,7 +2,7 @@
 
 #include "include/Enums.h"
 #include "include/Values.h"
-#include "DataTokenizer.h"
+#include "PacketDataTokenizer.h"
 #include "FileHeaderTokenizer.h"
 #include "PacketHeaderTokenizer.h"
 
@@ -29,7 +29,7 @@ public:
 
     std::string m_fileName;
 
-    DataTokenizer m_dataTokenizer;
+    PacketDataTokenizer m_dataTokenizer;
     FileHeaderTokenizer m_fileHeaderTokenizer;
     PacketHeaderTokenizer m_packetHeaderTokenizer;
 

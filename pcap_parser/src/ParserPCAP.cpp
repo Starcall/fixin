@@ -35,18 +35,9 @@ std::ostream& operator<<(std::ostream& os, const PacketDataValues& data)
     os << "PacketDataValues {" << std::endl;
 
     os << "  Values: [";
-    for (size_t i = 0; i < data.values.size(); ++i) {
-        os << std::hex << data.values[i];
-        if (i < data.values.size() - 1) {
-            os << ", ";
-        }
-    }
-    os << "]" << std::endl;
-
-    os << "  Tail: [";
-    for (size_t i = 0; i < data.tail.size(); ++i) {
-        os << std::hex << static_cast<int>(data.tail[i]);
-        if (i < data.tail.size() - 1) {
+    for (size_t i = 0; i < data.Values.size(); ++i) {
+        os << std::hex << static_cast<int>(data.Values[i]);
+        if (i < data.Values.size() - 1) {
             os << ", ";
         }
     }
@@ -61,7 +52,7 @@ std::ostream& operator<<(std::ostream& os, const PacketDataValues& data)
 ParserPCAP::ParserPCAP(std::string const &fileName) : m_fileName(fileName)
 {
     std::shared_ptr<std::ifstream> fileStream = std::make_shared<std::ifstream>(std::ifstream(fileName));
-    m_dataTokenizer = DataTokenizer(fileStream);
+    m_dataTokenizer = PacketDataTokenizer(fileStream);
     m_fileHeaderTokenizer = FileHeaderTokenizer(fileStream);
     m_packetHeaderTokenizer = PacketHeaderTokenizer(fileStream);
 }
@@ -281,19 +272,13 @@ bool ParserPCAP::ParsePacketData(PacketDataValues &parsedValues, PacketHeaderVal
         m_logger.log(Logger::LogLevel::Error, "Failed to read data token.");
         return false;
     }
-    std::unique_ptr<DataToken> dataToken = std::unique_ptr<DataToken>(dynamic_cast<DataToken*>(token.release()));
+    std::unique_ptr<PacketDataToken> dataToken = std::unique_ptr<PacketDataToken>(dynamic_cast<PacketDataToken*>(token.release()));
     if (!dataToken)
     {
         m_logger.log(Logger::LogLevel::Error, "Dynamic cast failed?");
         return false;
     }
-    //TODO Long operation? Optimize later? memcpy?
-    for (auto const& BaseToken : dataToken->m_4BytesValues)
-    {
-        // trick to allow reinterpret cast uint32 values in to uint8 data since we are on LE system
-        parsedValues.values.push_back(__builtin_bswap32(BaseToken.m_tokenValue));
-    }
-    parsedValues.tail = dataToken->m_tail;
+    parsedValues.Values = dataToken->m_values;
     auto FCSvalue = (fileMetadata.LinkType >> 28);
     parsedValues.HasFCS = FCSvalue & 8;
     if (parsedValues.HasFCS)

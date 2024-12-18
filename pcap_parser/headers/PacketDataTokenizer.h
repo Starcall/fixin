@@ -5,42 +5,39 @@
 namespace pcap_parser
 {
 
-class DataToken : public BaseToken
+class PacketDataToken : public BaseToken
 {
 public:
-    DataToken() : BaseToken() {}
-    DataToken(uint32_t tokenValue)
+    PacketDataToken() : BaseToken() {}
+    PacketDataToken(uint32_t tokenValue)
     {
-        m_4BytesValues.emplace_back(tokenValue);
+        m_values.emplace_back(tokenValue);
     }
-    DataToken(std::vector<BaseToken> const& values, std::vector<Byte> const& tail) : m_4BytesValues(values), m_tail(tail)
+    PacketDataToken(std::vector<Byte> const& values) : m_values(values)
     {}
-    DataToken(DataToken const& otherToken) : m_4BytesValues(otherToken.m_4BytesValues), m_tail(otherToken.m_tail)
+    PacketDataToken(PacketDataToken const& otherToken) : m_values(otherToken.m_values)
     {}
-    DataToken(DataToken &&otherToken)
+    PacketDataToken(PacketDataToken &&otherToken)
     {
-        m_4BytesValues = std::move(otherToken.m_4BytesValues);
-        m_tail = std::move(otherToken.m_tail);
+        m_values = std::move(otherToken.m_values);
     }
     // we assume here that data is not that big in our case so we can store it in memory 
-    // it is useless to store 4bytes values here, but I ve realized it later :x
-    std::vector<BaseToken> m_4BytesValues;
-    std::vector<Byte> m_tail;
+    std::vector<Byte> m_values;
 };
 
-class DataTokenizer : public Tokenizer
+class PacketDataTokenizer : public Tokenizer
 {
 public:
-    DataTokenizer() : Tokenizer()
+    PacketDataTokenizer() : Tokenizer()
     {
         m_length = 0;
     }
-    DataTokenizer(std::shared_ptr<std::ifstream> fileStream);
-    DataTokenizer(DataTokenizer&& other) noexcept : Tokenizer(std::move(other))
+    PacketDataTokenizer(std::shared_ptr<std::ifstream> fileStream);
+    PacketDataTokenizer(PacketDataTokenizer&& other) noexcept : Tokenizer(std::move(other))
     {
         m_length = other.m_length;
     }
-    DataTokenizer& operator=(DataTokenizer&& other) noexcept
+    PacketDataTokenizer& operator=(PacketDataTokenizer&& other) noexcept
     {
         if (this != &other)
         {
@@ -64,7 +61,7 @@ public:
     void ResetTerminal() override;
     /**/
 
-    ~DataTokenizer();  
+    ~PacketDataTokenizer();  
 private:
     size_t m_length = 0;
     bool m_isTerminal = false;

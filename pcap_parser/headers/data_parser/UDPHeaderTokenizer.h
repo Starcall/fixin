@@ -1,10 +1,8 @@
 #pragma once
-#include "vector"
-
 #include "include/BaseToken.h"
 #include "include/BaseTokenizer.h"
 #include "include/Enums.h"
-
+#include "include/Values.h"
 
 namespace pcap_parser
 {
@@ -13,28 +11,26 @@ namespace data_parser
 
 using Byte = unsigned char;
 
-
-class IPv4HeaderToken : public BaseToken
+class UDPHeaderToken : public BaseToken
 {
 public:
-    IPv4HeaderToken() : BaseToken() {}
-    IPv4HeaderToken(uint32_t value, enums::IPv4HeaderTokenIdentity tokenIdentity) :
+    UDPHeaderToken() : BaseToken() {}
+    UDPHeaderToken(uint32_t value, enums::UPDHeaderTokenIdentity tokenIdentity) :
         BaseToken(value),
         m_tokenIdentity(tokenIdentity)
     {}
-    enums::IPv4HeaderTokenIdentity m_tokenIdentity = enums::IPv4HeaderTokenIdentity::IPv4None;
+    enums::UPDHeaderTokenIdentity m_tokenIdentity = enums::UPDHeaderTokenIdentity::UDPNone;
 };
 
-class IPv4HeaderTokenizer : public BaseTokenizer
+class UDPHeaderTokenizer : public BaseTokenizer
 {
 public:
-    IPv4HeaderTokenizer(std::vector<Byte> const& values, size_t position = 0) 
+    UDPHeaderTokenizer(std::vector<Byte> const& values, size_t position = 0) 
         : m_values(values), 
           m_position(position),
           m_startPosition(position)
     {
-        m_lastTokenIdentity = enums::IPv4HeaderTokenIdentity::IPv4None;
-        m_headerSize = 0;
+        m_lastTokenIdentity = enums::UPDHeaderTokenIdentity::UDPNone;
     }
     /* BaseTokenizer methods */
     bool ReadToken(std::unique_ptr<BaseToken>& token) override;
@@ -50,9 +46,10 @@ public:
         return m_position;
     }
 
-    ~IPv4HeaderTokenizer() {};
+    ~UDPHeaderTokenizer() {};
 private:
-    // IPv4 always big endian
+    // UDP always big endian
+    // duplicate code could be removed
     bool GetKBytes(uint32_t& value, size_t k)
     {
         value = 0;
@@ -70,12 +67,10 @@ private:
     }
     std::vector<Byte> const& m_values;
     size_t m_position, m_startPosition;
-    uint8_t m_headerSize;
 
-    enums::IPv4HeaderTokenIdentity m_lastTokenIdentity = enums::IPv4HeaderTokenIdentity::IPv4None;
+    enums::UPDHeaderTokenIdentity m_lastTokenIdentity = enums::UPDHeaderTokenIdentity::UDPNone;
 };
+
     
 } // namespace data_parser
-
-    
 } // namespace pcap_parser

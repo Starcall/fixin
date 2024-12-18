@@ -61,6 +61,22 @@ std::ostream& operator<<(std::ostream& os, const EthernetIPv4HeaderValues& eth_i
     os << eth_ipv4.ipv4HeaderValues;
     return os;
 }
+std::ostream& operator<<(std::ostream& os, const UPDHeaderValues& udp)
+{
+    os << "UDP Header:\n";
+    os << "SourcePort: " << udp.SourcePort << "\n";
+    os << "DestinationPort: " << udp.DestinationPort << "\n";
+    os << "Length: " << udp.Length << "\n";
+    os << "Checksum: " << udp.Checksum << "\n";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const EthernetIPv4UDPHeaderValues& eth_ipv4_udp)
+{
+    os << static_cast<const EthernetIPv4HeaderValues&>(eth_ipv4_udp);
+    os << eth_ipv4_udp.udpValues;
+    return os;
+}
 
 bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
 {
@@ -75,9 +91,11 @@ bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
             {
                 return false;
             }
+            // IPv4
             if (parsedDataValues.Type == 0x0800)
             {
                 EthernetIPv4HeaderValues parsedIPv4Values(parsedDataValues);
+                
                 IPv4HeaderValues parsedIPv4Headervalues;
                 rc = ParseIPv4ProtocolHeader(parsedIPv4Headervalues);
                 if (!rc)
@@ -85,17 +103,32 @@ bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
                     return false;
                 }
 
-                // Assign the parsed IPv4HeaderValues to parsedIPv4Values and update parsedValues
                 parsedIPv4Values.ipv4HeaderValues = parsedIPv4Headervalues;
-                parsedValues = std::make_unique<EthernetIPv4HeaderValues>(parsedIPv4Values);
+                // UPD
+                if (parsedIPv4Values.ipv4HeaderValues.Protocol == 17)
+                {
+                    EthernetIPv4UDPHeaderValues parsedUDPValues(parsedIPv4Values);    
+
+                    UPDHeaderValues parsedUDPHeaderValues;
+                    rc = ParseUDPHeader(parsedUDPHeaderValues);
+                    if (!rc)
+                    {
+                        return false;
+                    }       
+                    parsedUDPValues.udpValues = parsedUDPHeaderValues;
+                    parsedValues = std::make_unique<EthernetIPv4UDPHeaderValues>(parsedUDPValues);
+                }
+                else
+                {
+                    // NOT IMPLEMENTED
+                    return false;
+                }
             }
             else
             {
                 // NOT IMPLEMENTED
                 return false;
             }
-
-            
             return true;
         }
         default:
@@ -109,7 +142,7 @@ bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
 bool DataParser::ParseEthernetProtocolHeader(EthernetHeaderValues &parsedValues)
 {
     // TODO add log
-    EthernetHeaderTokenizer headerTokenizer = EthernetHeaderTokenizer(m_data.values, m_data.tail);
+    EthernetHeaderTokenizer headerTokenizer = EthernetHeaderTokenizer(m_data.Values);
     while (!headerTokenizer.IsLastToken())
     {
         std::unique_ptr<BaseToken> token;
@@ -156,7 +189,7 @@ bool DataParser::ParseEthernetProtocolHeader(EthernetHeaderValues &parsedValues)
 
 bool DataParser::ParseIPv4ProtocolHeader(IPv4HeaderValues & parsedValues)
 {
-    IPv4HeaderTokenizer headerTokenizer(m_data.values, m_data.tail, m_firstUnprocessed);
+    IPv4HeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
     while (!headerTokenizer.IsLastToken())
     {
         std::unique_ptr<BaseToken> token;
@@ -214,6 +247,44 @@ bool DataParser::ParseIPv4ProtocolHeader(IPv4HeaderValues & parsedValues)
                 return false;
         }
     }
+    m_firstUnprocessed = headerTokenizer.GetPosition();
+    return true;
+}
+bool DataParser::ParseUDPHeader(UPDHeaderValues& parsedValues)
+{
+    UDPHeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
+
+    while (!headerTokenizer.IsLastToken())
+    {
+        std::unique_ptr<BaseToken> token;
+        if (!headerTokenizer.ReadToken(token) || !token)
+        {
+            return false;
+        }
+        UDPHeaderToken* udpToken = dynamic_cast<UDPHeaderToken*>(token.get());
+        if (!udpToken)
+        {
+            return false;
+        }
+        switch (udpToken->m_tokenIdentity)
+        {
+            case enums::UPDHeaderTokenIdentity::SourcePort:
+                parsedValues.SourcePort = static_cast<uint16_t>(udpToken->m_tokenValue);
+                break;
+            case enums::UPDHeaderTokenIdentity::DestinationPort:
+                parsedValues.DestinationPort = static_cast<uint16_t>(udpToken->m_tokenValue);
+                break;
+            case enums::UPDHeaderTokenIdentity::Length:
+                parsedValues.Length = static_cast<uint16_t>(udpToken->m_tokenValue);
+                break;
+            case enums::UPDHeaderTokenIdentity::ChecksumUDP:
+                parsedValues.Checksum = static_cast<uint16_t>(udpToken->m_tokenValue);
+                break;
+            case enums::UPDHeaderTokenIdentity::UDPNone:
+                return false;
+        }
+    }
+    m_firstUnprocessed = headerTokenizer.GetPosition();
     return true;
 }
 

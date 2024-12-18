@@ -55,6 +55,16 @@ enum IPv4HeaderTokenIdentity
     IPv4None
 };
 
+const size_t UPD_HEADER_TOKEN_IDENTITY_SIZE = 5;
+enum UPDHeaderTokenIdentity
+{
+    SourcePort,
+    DestinationPort,
+    Length,
+    ChecksumUDP,
+    UDPNone
+};
+
 enum Endian
 {
     BigEndian,
