@@ -78,7 +78,27 @@ std::ostream& operator<<(std::ostream& os, const EthernetIPv4UDPHeaderValues& et
     return os;
 }
 
-bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
+std::ostream& operator<<(std::ostream& os, const MarketDataHeaderValues& mdh)
+{
+    os << "MarketDataHeaderValues:\n";
+    os << "  MsgSeqNum   : " << mdh.MsgSeqNum << "\n";
+    os << "  MsgSize     : " << mdh.MsgSize << "\n";
+    os << "  MsgFlags    : " << mdh.MsgFlags << "\n";
+    os << "  SendingTime : " << mdh.SendingTime << "\n";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const MarketDataUDPHeaderValues& md)
+{
+    // First print the EthernetIPv4UDPHeaderValues portion (assumes you have an operator<< for it)
+    os << static_cast<const EthernetIPv4UDPHeaderValues&>(md);
+
+    // Then print the MarketDataHeaderValues portion
+    os << md.marketDataHeaderValues;
+    return os;
+}
+
+bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues)
 {
     // TODO log
     switch (m_fileMetadata.LinkType)
@@ -107,16 +127,28 @@ bool DataParser::ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues)
                 // UPD
                 if (parsedIPv4Values.ipv4HeaderValues.Protocol == 17)
                 {
-                    EthernetIPv4UDPHeaderValues parsedUDPValues(parsedIPv4Values);    
+                    MarketDataUDPHeaderValues parsedMDUDPValues(parsedIPv4Values);    
 
+                    // Parse UDP header
                     UPDHeaderValues parsedUDPHeaderValues;
                     rc = ParseUDPHeader(parsedUDPHeaderValues);
                     if (!rc)
                     {
                         return false;
                     }       
-                    parsedUDPValues.udpValues = parsedUDPHeaderValues;
-                    parsedValues = std::make_unique<EthernetIPv4UDPHeaderValues>(parsedUDPValues);
+                    parsedMDUDPValues.udpValues = parsedUDPHeaderValues;
+
+                    // Parse MD header
+                    MarketDataHeaderValues parsedMDH;
+                    rc = ParseMarketDataHeader(parsedMDH);
+                    if (!rc)
+                    {
+                        return false;
+                    }
+                    parsedMDUDPValues.marketDataHeaderValues = parsedMDH;
+
+                    parsedValues = std::make_unique<MarketDataUDPHeaderValues>(parsedMDUDPValues);
+                    return true;
                 }
                 else
                 {
@@ -287,6 +319,54 @@ bool DataParser::ParseUDPHeader(UPDHeaderValues& parsedValues)
     m_firstUnprocessed = headerTokenizer.GetPosition();
     return true;
 }
+
+bool DataParser::ParseMarketDataHeader(MarketDataHeaderValues& parsedValues)
+{
+    sbe_parser::MarketDataHeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
+    while (!headerTokenizer.IsLastToken())
+    {
+        std::unique_ptr<BaseToken> token;
+        if (!headerTokenizer.ReadToken(token) || !token)
+        {
+            return false;
+        }
+        sbe_parser::MarketDataHeaderToken* mdHeaderToken = dynamic_cast<sbe_parser::MarketDataHeaderToken*>(token.get());
+        if (!mdHeaderToken)
+        {
+            return false;
+        }
+        switch (mdHeaderToken->m_tokenIdentity)
+        {
+            case enums::MarketDataTokenIdentity::MsgSeqNum:
+            {
+                parsedValues.MsgSeqNum = static_cast<uint32_t>(mdHeaderToken->m_bigValue);
+                break;
+            }
+            case enums::MarketDataTokenIdentity::MsgSize:
+            {
+                parsedValues.MsgSize = static_cast<uint16_t>(mdHeaderToken->m_bigValue);
+                break;
+            }
+            case enums::MarketDataTokenIdentity::MsgFlags:
+            {
+                parsedValues.MsgFlags = static_cast<uint16_t>(mdHeaderToken->m_bigValue);
+                break;
+            }
+            case enums::MarketDataTokenIdentity::SendingTime:
+            {
+                parsedValues.SendingTime = mdHeaderToken->m_bigValue;
+                break;
+            }
+            default:
+            {
+                return false;
+            }
+        }
+    }
+    m_firstUnprocessed = headerTokenizer.GetPosition();
+    return true;
+}
+    
 
 } // namespace data_parser
 } // namespace pcap_parser

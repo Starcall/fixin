@@ -3,6 +3,7 @@
 #include "EthernetHeaderTokenizer.h"
 #include "IPv4HeaderTokenizer.h"
 #include "UDPHeaderTokenizer.h"
+#include "MarketDataHeaderTokenizer.h"
 
 namespace pcap_parser
 {
@@ -14,6 +15,8 @@ std::ostream& operator<<(std::ostream& os, const IPv4HeaderValues& ipv4);
 std::ostream& operator<<(std::ostream& os, const EthernetIPv4HeaderValues& eth_ipv4);
 std::ostream& operator<<(std::ostream& os, const UPDHeaderValues& udp);
 std::ostream& operator<<(std::ostream& os, const EthernetIPv4UDPHeaderValues& eth_ipv4_udp);
+std::ostream& operator<<(std::ostream& os, const MarketDataHeaderValues& md);
+std::ostream& operator<<(std::ostream& os, const MarketDataUDPHeaderValues& md);
 
 class DataParser
 {
@@ -26,14 +29,15 @@ public:
     /*
     * @param pointer to struct that will hold parsed values
     */
-    bool ParseData(std::unique_ptr<BasicProtocolValues> &parsedValues);
+    bool ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues);
 
-
+    bool ParseSBEMessageData()
 private:
-    // In case of this task I chose not to create ProtocolParser since we are parsing only EthernetProtocol
+    // In case of this task I chose not to create ProtocolParser for simplification since we are parsing only EthernetProtocol
     bool ParseEthernetProtocolHeader(EthernetHeaderValues& parsedValues);
     bool ParseIPv4ProtocolHeader(IPv4HeaderValues& parsedValues);
     bool ParseUDPHeader(UPDHeaderValues& parsedValues);
+    bool ParseMarketDataHeader(MarketDataHeaderValues& parsedValues);
 
     FileHeaderValues const& m_fileMetadata;
     PacketDataValues const& m_data;

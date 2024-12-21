@@ -7,7 +7,7 @@ namespace data_parser
     bool UDPHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken>& token) 
     {
         enums::UPDHeaderTokenIdentity identity = static_cast<enums::UPDHeaderTokenIdentity>((static_cast<int>(m_lastTokenIdentity) + 1) % enums::UPD_HEADER_TOKEN_IDENTITY_SIZE);
-            uint32_t value = 0;
+        uint32_t value = 0;
         if (!GetKBytes(value, 2))
         {
             return false;

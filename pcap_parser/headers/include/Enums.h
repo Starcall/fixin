@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdlib>
 
+
+// TODO add namespaces
+
 namespace pcap_parser
 {
 namespace enums
@@ -63,6 +66,16 @@ enum UPDHeaderTokenIdentity
     Length,
     ChecksumUDP,
     UDPNone
+};
+
+const size_t MARKET_DATA_TOKEN_IDENTITY_SIZE = 5;
+enum MarketDataTokenIdentity
+{
+    MsgSeqNum,
+    MsgSize,
+    MsgFlags,
+    SendingTime,
+    MarketDataNone
 };
 
 enum Endian

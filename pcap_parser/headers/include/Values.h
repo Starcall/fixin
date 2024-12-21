@@ -7,6 +7,8 @@
 
 #include "Enums.h"
 
+// TODO add namespaces
+
 namespace pcap_parser
 {
 
@@ -63,6 +65,14 @@ struct UPDHeaderValues
     uint16_t Checksum;
 };
 
+struct MarketDataHeaderValues
+{
+    uint32_t MsgSeqNum;
+    uint16_t MsgSize;
+    uint16_t MsgFlags;
+    uint64_t SendingTime;
+};
+
 struct BasicProtocolValues
 {
     BasicProtocolValues() = default;
@@ -71,7 +81,6 @@ struct BasicProtocolValues
     uint16_t Type = 0;
     virtual ~BasicProtocolValues() {};
 };
-
 
 struct EthernetHeaderValues : public BasicProtocolValues
 {
@@ -112,5 +121,34 @@ struct EthernetIPv4UDPHeaderValues : public EthernetIPv4HeaderValues
     UPDHeaderValues udpValues;
 };
 
+struct MarketDataUDPHeaderValues : public EthernetIPv4UDPHeaderValues
+{
+    MarketDataUDPHeaderValues() = default;
+    MarketDataUDPHeaderValues(const EthernetIPv4UDPHeaderValues& other)
+        : EthernetIPv4UDPHeaderValues(other)
+    {}
+    MarketDataUDPHeaderValues(MarketDataUDPHeaderValues const& other)
+        : EthernetIPv4UDPHeaderValues(other),
+          marketDataHeaderValues(other.marketDataHeaderValues)
+    {}
 
+    MarketDataHeaderValues marketDataHeaderValues;
+};
+
+struct SBEMessageHeadervalues
+{
+    uint16_t BlockLength;
+    uint16_t TemplateID;
+    uint16_t SchemaID;
+    uint16_t Version;
+};
+
+struct BasicSBEMessageValues
+{
+    BasicSBEMessageValues() = default;
+    BasicSBEMessageValues(BasicSBEMessageValues const& other) : Type(other.Type)
+    {}
+    uint16_t Type = 0;
+    virtual ~BasicSBEMessageValues() {};
+};
 } // namespace pcap_parser

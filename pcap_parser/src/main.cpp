@@ -113,10 +113,10 @@ int main()
         std::cout << packetDataValues;
         data_parser::DataParser dataParser = data_parser::DataParser(fileHeaderValues, packetDataValues);
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
-        auto rc = dataParser.ParseData(parsedProtocolData);
+        auto rc = dataParser.ParseProtocolHeadersData(parsedProtocolData);
         std::cout << rc << "\n";
-        std::unique_ptr<EthernetIPv4UDPHeaderValues> ethernetDataValues = std::unique_ptr<EthernetIPv4UDPHeaderValues>(dynamic_cast<EthernetIPv4UDPHeaderValues*>(parsedProtocolData.release()));
-        std::cout << *ethernetDataValues.get();
+        std::unique_ptr<MarketDataUDPHeaderValues> MDValues = std::unique_ptr<MarketDataUDPHeaderValues>(dynamic_cast<MarketDataUDPHeaderValues*>(parsedProtocolData.release()));
+        std::cout << *MDValues.get();
 
         parser.ResetTokenizersTerminals();
         break;
