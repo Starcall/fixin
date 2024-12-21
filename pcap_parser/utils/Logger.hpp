@@ -41,6 +41,7 @@ public:
     }
     void log(LogLevel level, const std::string& message) 
     {
+        return;
         std::string logMessage = getCurrentTime() + " [" + logLevelToString(level) + "] " + message;
         
         if (logToFile && logFile.is_open()) 

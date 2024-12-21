@@ -25,15 +25,7 @@ std::ostream& operator<<(std::ostream& os, const EthernetHeaderValues& eth) {
     return os;
 }
 
-std::string ipToDottedDecimal(uint32_t ip) {
-    uint8_t b4 = (ip & 0xFF);
-    uint8_t b3 = ((ip >> 8) & 0xFF);
-    uint8_t b2 = ((ip >> 16) & 0xFF);
-    uint8_t b1 = ((ip >> 24) & 0xFF);
-    std::ostringstream oss;
-    oss << (unsigned)b1 << "." << (unsigned)b2 << "." << (unsigned)b3 << "." << (unsigned)b4;
-    return oss.str();
-}
+
 
 inline std::ostream& operator<<(std::ostream& os, const IPv4HeaderValues& ipv4) {
     os << "Version: " << (unsigned)ipv4.Version << "\n";
@@ -46,8 +38,8 @@ inline std::ostream& operator<<(std::ostream& os, const IPv4HeaderValues& ipv4) 
     os << "TTL: " << (unsigned)ipv4.TTL << "\n";
     os << "Protocol: " << (unsigned)ipv4.Protocol << "\n";
     os << "Checksum: " << ipv4.Checksum << "\n";
-    os << "SourceIP: " << ipToDottedDecimal(ipv4.SourceIP) << "\n";
-    os << "DestinationIp: " << ipToDottedDecimal(ipv4.DestinationIp) << "\n";
+    os << "SourceIP: " << utils::ipToDottedDecimal(ipv4.SourceIP) << "\n";
+    os << "DestinationIp: " << utils::ipToDottedDecimal(ipv4.DestinationIp) << "\n";
     os << "Options: ";
     for (auto b : ipv4.Options) {
         os << (unsigned)b << " "; 
@@ -88,13 +80,33 @@ std::ostream& operator<<(std::ostream& os, const MarketDataHeaderValues& mdh)
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, const IncrementalPacketHeaderValues& values) 
+{
+    os << "Incremental Packet Header:\n";
+    os << "  TransactTime            : " << utils::nanosecondsToRealTime(values.TransactTime) << "\n";
+    os << "  ExchangeTradingSessionID: " << values.ExchangeTradingSessionID << "\n";
+    return os;
+}
+std::ostream& operator<<(std::ostream& os, const InrementalPacketMDUDPValues& values) 
+{
+    os << static_cast<const MarketDataUDPHeaderValues&>(values);
+    os << values.incrementalPacketHeaderValues; 
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const MarketDataUDPHeaderValues& md)
 {
-    // First print the EthernetIPv4UDPHeaderValues portion (assumes you have an operator<< for it)
     os << static_cast<const EthernetIPv4UDPHeaderValues&>(md);
-
-    // Then print the MarketDataHeaderValues portion
     os << md.marketDataHeaderValues;
+    return os;
+}
+std::ostream& operator<<(std::ostream& os, const message::MessageHeaderValues& header) 
+{
+    os << "MessageHeaderValues:\n";
+    os << "  BlockLength: " << header.BlockLength << "\n";
+    os << "  TemplateID : " << header.TemplateID << "\n";
+    os << "  SchemaID   : " << header.SchemaID << "\n";
+    os << "  Version    : " << header.Version << "\n";
     return os;
 }
 
@@ -147,7 +159,25 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                     }
                     parsedMDUDPValues.marketDataHeaderValues = parsedMDH;
 
-                    parsedValues = std::make_unique<MarketDataUDPHeaderValues>(parsedMDUDPValues);
+                    if (parsedMDH.MsgFlags & 0x8)
+                    {
+                        // Incremental Packet
+                        InrementalPacketMDUDPValues parsedInrementalPacketMDUDPValues(parsedMDUDPValues);
+                        // Parse IncrementalPacketHeader
+                        IncrementalPacketHeaderValues parsedIncrementalPacketHeaderValues;
+                        rc = ParseIncrementalPacketHeader(parsedIncrementalPacketHeaderValues);
+                        if (!rc)
+                        {
+                            return false;
+                        }      
+                        parsedInrementalPacketMDUDPValues.incrementalPacketHeaderValues = parsedIncrementalPacketHeaderValues;
+                        parsedValues = std::make_unique<InrementalPacketMDUDPValues>(parsedInrementalPacketMDUDPValues);
+                    }
+                    else
+                    {
+                        // Snapshot Packet
+                        parsedValues = std::make_unique<MarketDataUDPHeaderValues>(parsedMDUDPValues);
+                    }
                     return true;
                 }
                 else
@@ -156,7 +186,7 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                     return false;
                 }
             }
-            else
+            else    
             {
                 // NOT IMPLEMENTED
                 return false;
@@ -171,6 +201,199 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
     }
 
 }
+
+bool DataParser::ParseMessageHeaderData(message::MessageHeaderValues &parsedValues)
+{
+    sbe_parser::MessageHeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
+    while (!headerTokenizer.IsLastToken())
+    {
+        std::unique_ptr<BaseToken> token;
+        if (!headerTokenizer.ReadToken(token) || !token)
+        {
+            return false;
+        }
+        sbe_parser::MessageHeaderToken* messageHeaderToken = dynamic_cast<sbe_parser::MessageHeaderToken*>(token.get());
+        if (!messageHeaderToken)
+        {
+            return false;
+        }
+        switch (messageHeaderToken->m_tokenIdentity)
+        {
+            case enums::message::MessageHeaderTokenIdenity::MessageHeaderNone:
+            {
+                return false;
+                break;
+            }
+            case enums::message::MessageHeaderTokenIdenity::BlockLength:
+            {
+                parsedValues.BlockLength = static_cast<uint16_t>(messageHeaderToken->m_tokenValue);
+                break;
+            }
+            case enums::message::MessageHeaderTokenIdenity::SchemaID:
+            {
+                parsedValues.SchemaID = static_cast<uint16_t>(messageHeaderToken->m_tokenValue);
+                break;
+            }
+            case enums::message::MessageHeaderTokenIdenity::TemplateID:
+            {
+                parsedValues.TemplateID = static_cast<uint16_t>(messageHeaderToken->m_tokenValue);
+                break;
+            }
+            case enums::message::MessageHeaderTokenIdenity::Version:
+            {
+                parsedValues.Version = static_cast<uint16_t>(messageHeaderToken->m_tokenValue);
+                break;
+            }
+        }
+    }
+    m_firstUnprocessed = headerTokenizer.GetPosition();
+    return true;
+}
+
+bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& parsedMessage, enums::message::MessageType type)
+{
+    switch (type)
+    {
+    case enums::message::MessageType::Unsupported:
+    {
+        return false;
+        break;
+    }
+    case enums::message::MessageType::OrderUpdate:
+    {        
+        if (!parsedMessage)
+        {
+            return false;
+        }
+        if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
+        {
+            return false;
+        }
+        if (parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderUpdateMessage::GetDataSizeInBytes())
+        {
+            return false;
+        }
+        sbe_parser::OrderUpdateMessage parsed(parsedMessage->m_SBEHeader);
+        const uint8_t* current = m_data.Values.data() + m_firstUnprocessed;
+
+        parsed.MDEntryID = utils::readLittleEndian<int64_t>(current);
+        current += sizeof(int64_t);
+
+        int64_t mantissa = utils::readLittleEndian<int64_t>(current);
+        parsed.MDEntryPx.setMantissa(mantissa);
+        current += sizeof(int64_t);
+
+        parsed.MDEntrySize = utils::readLittleEndian<int64_t>(current);
+        current += sizeof(int64_t);
+
+        parsed.MDFlags = utils::readLittleEndian<uint64_t>(current);
+        current += sizeof(uint64_t);
+
+        parsed.MDFlags2 = utils::readLittleEndian<uint64_t>(current);
+        current += sizeof(uint64_t);
+
+        parsed.SecurityID = utils::readLittleEndian<int32_t>(current);
+        current += sizeof(int32_t);
+
+        parsed.RptSeq = utils::readLittleEndian<uint32_t>(current);
+        current += sizeof(uint32_t);
+
+        parsed.MDUpdateAction = *current;
+        current += sizeof(uint8_t);
+
+        parsed.MDEntryType = *current;
+        current += sizeof(char);
+
+        m_firstUnprocessed = current - m_data.Values.data();
+        parsedMessage = std::make_unique<sbe_parser::OrderUpdateMessage>(parsed);
+        break;
+    }
+    case enums::message::MessageType::OrderExecution:
+    {
+        if (!parsedMessage)
+        {
+            return false;
+        }
+        if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
+        {
+            return false;
+        }
+        if (parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytes()
+            && parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytesTechincalTrades()
+            && parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytesTechincalTradesWithoutNull())
+        {
+            return false;
+        }
+        sbe_parser::OrderExecutionMessage parsed(parsedMessage->m_SBEHeader);
+        const uint8_t* current = m_data.Values.data() + m_firstUnprocessed;
+
+        parsed.MDEntryID = utils::readLittleEndian<int64_t>(current);
+        current += sizeof(int64_t);
+        if (parsedMessage->m_SBEHeader.BlockLength == sbe_parser::OrderExecutionMessage::GetDataSizeInBytes()
+            || parsedMessage->m_SBEHeader.BlockLength == sbe_parser::OrderExecutionMessage::GetDataSizeInBytesTechincalTrades())
+        {
+            int64_t mantissa = utils::readLittleEndian<int64_t>(current);
+            parsed.MDEntryPx.setMantissa(mantissa);
+            current += sizeof(int64_t);
+        }
+        else
+        {
+            parsed.MDEntryPx.setMantissa(utils::Decimal<5>::getNullValue());
+        }
+
+        if (parsedMessage->m_SBEHeader.BlockLength == sbe_parser::OrderExecutionMessage::GetDataSizeInBytes())
+        {
+            parsed.MDEntrySize = utils::readLittleEndian<int64_t>(current);
+            current += sizeof(int64_t);
+        }
+        else
+        {
+            parsed.MDEntrySize = 0;
+        }
+
+
+        int64_t lastMantissa = utils::readLittleEndian<int64_t>(current);
+        parsed.LastPx.setMantissa(lastMantissa);
+        current += sizeof(int64_t);
+
+        parsed.LastQty = utils::readLittleEndian<int64_t>(current);
+        current += sizeof(int64_t);
+
+        parsed.TradeID = utils::readLittleEndian<int64_t>(current);
+        current += sizeof(int64_t);
+
+        parsed.MDFlags = utils::readLittleEndian<uint64_t>(current);
+        current += sizeof(uint64_t);
+
+        parsed.MDFlags2 = utils::readLittleEndian<uint64_t>(current);
+        current += sizeof(uint64_t);
+
+        parsed.SecurityID = utils::readLittleEndian<int32_t>(current);
+        current += sizeof(int32_t);
+
+        parsed.RptSeq = utils::readLittleEndian<uint32_t>(current);
+        current += sizeof(uint32_t);
+
+        parsed.MDUpdateAction = *current;
+        current += sizeof(uint8_t);
+
+        parsed.MDEntryType = *current;
+        current += sizeof(char);
+
+        m_firstUnprocessed += parsed.m_SBEHeader.BlockLength;
+        parsedMessage = std::make_unique<sbe_parser::OrderExecutionMessage>(parsed);
+        break;
+    }
+
+    default:
+    {
+        return false;
+        break;
+    }
+    }
+    return true;
+}
+
 bool DataParser::ParseEthernetProtocolHeader(EthernetHeaderValues &parsedValues)
 {
     // TODO add log
@@ -285,7 +508,6 @@ bool DataParser::ParseIPv4ProtocolHeader(IPv4HeaderValues & parsedValues)
 bool DataParser::ParseUDPHeader(UPDHeaderValues& parsedValues)
 {
     UDPHeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
-
     while (!headerTokenizer.IsLastToken())
     {
         std::unique_ptr<BaseToken> token;
@@ -366,7 +588,41 @@ bool DataParser::ParseMarketDataHeader(MarketDataHeaderValues& parsedValues)
     m_firstUnprocessed = headerTokenizer.GetPosition();
     return true;
 }
-    
+bool DataParser::ParseIncrementalPacketHeader(IncrementalPacketHeaderValues& parsedValues) {
+    sbe_parser::IncrementalPacketHeaderTokenizer headerTokenizer(m_data.Values, m_firstUnprocessed);
+
+    while (!headerTokenizer.IsLastToken()) {
+        std::unique_ptr<BaseToken> token;
+        if (!headerTokenizer.ReadToken(token) || !token) {
+            return false;
+        }
+
+        auto* incToken = dynamic_cast<sbe_parser::IncrementalPacketHeaderToken*>(token.get());
+        if (!incToken) {
+            return false;
+        }
+        switch (incToken->m_tokenIdentity) {
+            case enums::IncrementalPacketHeaderTokenIdentity::IncrementalPacketNone:
+            {
+                return false;
+                break;
+            }
+            case enums::IncrementalPacketHeaderTokenIdentity::ExchangeTradingSessionID:
+            {
+                parsedValues.ExchangeTradingSessionID = static_cast<uint32_t>(incToken->m_bigValue);
+                break;
+            }
+            case enums::IncrementalPacketHeaderTokenIdentity::TransactTime:
+            {
+                parsedValues.TransactTime = incToken->m_bigValue;
+                break;
+            }
+        }
+    }
+
+    m_firstUnprocessed = headerTokenizer.GetPosition();
+    return true;
+}
 
 } // namespace data_parser
 } // namespace pcap_parser

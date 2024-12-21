@@ -73,6 +73,12 @@ struct MarketDataHeaderValues
     uint64_t SendingTime;
 };
 
+struct IncrementalPacketHeaderValues 
+{
+    uint64_t TransactTime;
+    uint32_t ExchangeTradingSessionID;
+};
+
 struct BasicProtocolValues
 {
     BasicProtocolValues() = default;
@@ -90,6 +96,7 @@ struct EthernetHeaderValues : public BasicProtocolValues
           DestinationMac(other.DestinationMac),
           SourceMac(other.SourceMac)
           {}
+    virtual ~EthernetHeaderValues() {};
     std::array<Byte, 6> DestinationMac;
     std::array<Byte, 6> SourceMac;
 };
@@ -104,6 +111,7 @@ struct EthernetIPv4HeaderValues : public EthernetHeaderValues
         : EthernetHeaderValues(other),
           ipv4HeaderValues(other.ipv4HeaderValues)
           {}
+    virtual ~EthernetIPv4HeaderValues() {};
     IPv4HeaderValues ipv4HeaderValues;
 };
 
@@ -118,6 +126,7 @@ struct EthernetIPv4UDPHeaderValues : public EthernetIPv4HeaderValues
           udpValues(other.udpValues)
     {}
 
+    virtual ~EthernetIPv4UDPHeaderValues() {};
     UPDHeaderValues udpValues;
 };
 
@@ -132,23 +141,35 @@ struct MarketDataUDPHeaderValues : public EthernetIPv4UDPHeaderValues
           marketDataHeaderValues(other.marketDataHeaderValues)
     {}
 
+    virtual ~MarketDataUDPHeaderValues() {};
     MarketDataHeaderValues marketDataHeaderValues;
 };
 
-struct SBEMessageHeadervalues
+struct InrementalPacketMDUDPValues : public MarketDataUDPHeaderValues
+{
+    InrementalPacketMDUDPValues() = default;
+    InrementalPacketMDUDPValues(const MarketDataUDPHeaderValues& other)
+        : MarketDataUDPHeaderValues(other)
+    {}
+    InrementalPacketMDUDPValues(InrementalPacketMDUDPValues const& other)
+        : MarketDataUDPHeaderValues(other),
+          incrementalPacketHeaderValues(other.incrementalPacketHeaderValues)
+    {}
+
+    virtual ~InrementalPacketMDUDPValues() {};
+    IncrementalPacketHeaderValues incrementalPacketHeaderValues;
+};
+
+namespace message
+{
+
+struct MessageHeaderValues
 {
     uint16_t BlockLength;
     uint16_t TemplateID;
     uint16_t SchemaID;
     uint16_t Version;
 };
-
-struct BasicSBEMessageValues
-{
-    BasicSBEMessageValues() = default;
-    BasicSBEMessageValues(BasicSBEMessageValues const& other) : Type(other.Type)
-    {}
-    uint16_t Type = 0;
-    virtual ~BasicSBEMessageValues() {};
-};
+    
+} // namespace message
 } // namespace pcap_parser

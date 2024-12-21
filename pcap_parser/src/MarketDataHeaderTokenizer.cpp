@@ -38,7 +38,7 @@ bool MarketDataHeaderTokenizer::ReadToken(std::unique_ptr<BaseToken> &token)
 
 bool MarketDataHeaderTokenizer::IsLastToken() const
 {   
-    return m_lastTokenIdentity == enums::MarketDataTokenIdentity::MsgFlags;
+    return m_lastTokenIdentity == enums::MarketDataTokenIdentity::SendingTime;
 }
 void MarketDataHeaderTokenizer::ResetTerminal()
 {

@@ -6,6 +6,9 @@
 
 namespace pcap_parser
 {
+
+using Byte = unsigned char;
+
 namespace enums
 {
 const size_t HEADER_TOKEN_IDENTITY_SIZE = 7;
@@ -78,6 +81,15 @@ enum MarketDataTokenIdentity
     MarketDataNone
 };
 
+const size_t INCREMENTAL_PACKET_HEADER_TOKEN_IDENTITY_SIZE = 3;
+enum IncrementalPacketHeaderTokenIdentity {
+    TransactTime,
+    ExchangeTradingSessionID,
+    IncrementalPacketNone
+};
+
+
+
 enum Endian
 {
     BigEndian,
@@ -91,5 +103,29 @@ enum ValueStatus
     NothingToRead,
     Tail
 };
+namespace message
+{
+
+const size_t MESSAGE_HEADER_TOKEN_SIZE = 5;
+enum MessageHeaderTokenIdenity
+{
+    BlockLength,
+    TemplateID,
+    SchemaID,
+    Version,
+    MessageHeaderNone
+};
+
+enum MessageType
+{
+    OrderUpdate,
+    OrderExecution,
+    OrderBookSnapshot,
+    Unsupported
+};
+} // namespace message
+
+
+
 } // namespace enums
 } // namespace pcap_parser

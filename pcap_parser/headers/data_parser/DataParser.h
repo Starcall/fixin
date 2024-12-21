@@ -4,6 +4,14 @@
 #include "IPv4HeaderTokenizer.h"
 #include "UDPHeaderTokenizer.h"
 #include "MarketDataHeaderTokenizer.h"
+#include "IncrementalPacketHeaderTokenizer.h"
+
+#include "message/MessageHeaderTokenizer.h"
+#include "message/BaseMessage.h"
+#include "message/OrderUpdateMessage.h"
+#include "message/OrderExecuteMessage.h"
+
+#include "../../utils/utils.hpp"
 
 namespace pcap_parser
 {
@@ -17,7 +25,9 @@ std::ostream& operator<<(std::ostream& os, const UPDHeaderValues& udp);
 std::ostream& operator<<(std::ostream& os, const EthernetIPv4UDPHeaderValues& eth_ipv4_udp);
 std::ostream& operator<<(std::ostream& os, const MarketDataHeaderValues& md);
 std::ostream& operator<<(std::ostream& os, const MarketDataUDPHeaderValues& md);
-
+std::ostream& operator<<(std::ostream& os, const IncrementalPacketHeaderValues& values);
+std::ostream& operator<<(std::ostream& os, const InrementalPacketMDUDPValues& values);
+std::ostream& operator<<(std::ostream& os, const message::MessageHeaderValues& header);
 class DataParser
 {
 public:
@@ -27,17 +37,25 @@ public:
     {}
 
     /*
-    * @param pointer to struct that will hold parsed values
+    * @param parsedValues pointer to struct that will hold parsed values
     */
     bool ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues);
 
-    bool ParseSBEMessageData()
+    /*
+    * @param parsedValues struct with message header values
+    */
+    bool ParseMessageHeaderData(message::MessageHeaderValues& parsedValues);
+
+    bool ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& parsedMessage, enums::message::MessageType type);
+
 private:
     // In case of this task I chose not to create ProtocolParser for simplification since we are parsing only EthernetProtocol
     bool ParseEthernetProtocolHeader(EthernetHeaderValues& parsedValues);
     bool ParseIPv4ProtocolHeader(IPv4HeaderValues& parsedValues);
     bool ParseUDPHeader(UPDHeaderValues& parsedValues);
     bool ParseMarketDataHeader(MarketDataHeaderValues& parsedValues);
+    bool ParseIncrementalPacketHeader(IncrementalPacketHeaderValues& parsedValues);
+
 
     FileHeaderValues const& m_fileMetadata;
     PacketDataValues const& m_data;

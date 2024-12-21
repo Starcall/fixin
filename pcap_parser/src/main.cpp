@@ -110,16 +110,45 @@ int main()
     {
         PacketDataValues packetDataValues;
         auto s = parser.ParsePacketData(packetDataValues, packetHeaderValues, fileHeaderValues);
-        std::cout << packetDataValues;
+        //std::cout << packetDataValues;
         data_parser::DataParser dataParser = data_parser::DataParser(fileHeaderValues, packetDataValues);
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
         auto rc = dataParser.ParseProtocolHeadersData(parsedProtocolData);
         std::cout << rc << "\n";
-        std::unique_ptr<MarketDataUDPHeaderValues> MDValues = std::unique_ptr<MarketDataUDPHeaderValues>(dynamic_cast<MarketDataUDPHeaderValues*>(parsedProtocolData.release()));
+        std::unique_ptr<InrementalPacketMDUDPValues> MDValues = std::unique_ptr<InrementalPacketMDUDPValues>(dynamic_cast<InrementalPacketMDUDPValues*>(parsedProtocolData.release()));
+        if (!MDValues)
+        {
+            // snapshot
+            parser.ResetTokenizersTerminals();
+            continue;
+        }
         std::cout << *MDValues.get();
+        
+        message::MessageHeaderValues parsedMessageHeader;
+        rc = dataParser.ParseMessageHeaderData(parsedMessageHeader);
+        std::cout << rc << "\n";
+        if (parsedMessageHeader.TemplateID == 15) {
+            //std::cout << *MDValues.get();
 
+            std::cout << parsedMessageHeader;
+            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderUpdate);
+            std::cout  << rc << "\n";
+            std::unique_ptr<sbe_parser::OrderUpdateMessage> orderUpdateMessage = std::unique_ptr<sbe_parser::OrderUpdateMessage>(dynamic_cast<sbe_parser::OrderUpdateMessage*>(parsedMessageData.release()));
+            std::cout << *orderUpdateMessage.get();
+        }
+        if (parsedMessageHeader.TemplateID == 16) {
+            //std::cout << *MDValues.get();
+
+            std::cout << parsedMessageHeader;
+            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderExecution);
+            std::cout  << rc << "\n";
+            std::unique_ptr<sbe_parser::OrderExecutionMessage> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderExecutionMessage>(dynamic_cast<sbe_parser::OrderExecutionMessage*>(parsedMessageData.release()));
+            std::cout << *orderExecuteMessage.get();
+        } 
         parser.ResetTokenizersTerminals();
-        break;
+        
     }
     return 0;
 }
