@@ -10,6 +10,7 @@
 #include "message/BaseMessage.h"
 #include "message/OrderUpdateMessage.h"
 #include "message/OrderExecuteMessage.h"
+#include "message/OrderBookSnapshotMessage.h"
 
 #include "../../utils/utils.hpp"
 

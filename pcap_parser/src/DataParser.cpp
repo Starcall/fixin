@@ -76,7 +76,7 @@ std::ostream& operator<<(std::ostream& os, const MarketDataHeaderValues& mdh)
     os << "  MsgSeqNum   : " << mdh.MsgSeqNum << "\n";
     os << "  MsgSize     : " << mdh.MsgSize << "\n";
     os << "  MsgFlags    : " << mdh.MsgFlags << "\n";
-    os << "  SendingTime : " << mdh.SendingTime << "\n";
+    os << "  SendingTime : " << utils::nanosecondsToRealTime(mdh.SendingTime) << "\n";
     return os;
 }
 
@@ -252,6 +252,9 @@ bool DataParser::ParseMessageHeaderData(message::MessageHeaderValues &parsedValu
 
 bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& parsedMessage, enums::message::MessageType type)
 {
+    // I decided to not implement Tokenizers approach here
+    // It will be faster, less memory allocation and easily paralled
+    // It will be not paralleled in scope of this task
     switch (type)
     {
     case enums::message::MessageType::Unsupported:
@@ -382,6 +385,86 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
 
         m_firstUnprocessed += parsed.m_SBEHeader.BlockLength;
         parsedMessage = std::make_unique<sbe_parser::OrderExecutionMessage>(parsed);
+        break;
+    }
+    case enums::message::MessageType::OrderBookSnapshot:
+    {
+        if (!parsedMessage)
+        {
+            return false;
+        }
+
+        if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
+        {
+            return false;
+        }
+
+        if (parsedMessage->m_SBEHeader.BlockLength < sbe_parser::OrderBookSnapshot::GetDataSizeInBytes())
+        {
+            return false;
+        }
+
+        sbe_parser::OrderBookSnapshot parsed(parsedMessage->m_SBEHeader);
+        const uint8_t* current = m_data.Values.data() + m_firstUnprocessed;
+
+        parsed.SecurityID = utils::readLittleEndian<int32_t>(current);
+        current += sizeof(int32_t);
+
+        parsed.LastMsgSeqNumProcessed = utils::readLittleEndian<uint32_t>(current);
+        current += sizeof(uint32_t);
+
+        parsed.RptSeq = utils::readLittleEndian<uint32_t>(current);
+        current += sizeof(uint32_t);
+
+        parsed.ExchangeTradingSessionID = utils::readLittleEndian<uint32_t>(current);
+        current += sizeof(uint32_t);
+
+        parsed.NoMDEntries = utils::readLittleEndian<uint16_t>(current);
+        current += sizeof(uint16_t);
+        parsed.NoMDEntries += static_cast<uint32_t>(utils::readLittleEndian<uint8_t>(current)) << 16;
+        current += sizeof(uint8_t);
+
+        // it is impossible to understand specification there
+        // it says that some fields could be not transmitted
+        // but we do not have any delimeter or bitmask of skipped values
+        // lets just hope they include null values always
+        assert(m_firstUnprocessed + 
+            sbe_parser::OrderBookSnapshot::GetDataSizeInBytes() +
+            sbe_parser::OrderBookSnapshot::GetNumInGroup(parsed.NoMDEntries) * sbe_parser::OrderBookSnapshot::GetBlockLength(parsed.NoMDEntries) <= m_data.Values.size());
+        for (uint8_t i = 0; i < sbe_parser::OrderBookSnapshot::GetNumInGroup(parsed.NoMDEntries); i++)
+        {
+            sbe_parser::OrderBookSnapshot::MarketDataEntry entry;
+
+            entry.MDEntryID = utils::readLittleEndian<int64_t>(current);
+            current += sizeof(int64_t);
+
+            entry.TransactTime = utils::readLittleEndian<uint64_t>(current);
+            current += sizeof(uint64_t);
+
+            int64_t mantissa = utils::readLittleEndian<int64_t>(current);
+            entry.MDEntryPx.setMantissa(mantissa);
+            current += sizeof(int64_t);
+
+            entry.MDEntrySize = utils::readLittleEndian<int64_t>(current);
+            current += sizeof(int64_t);
+
+            entry.TradeID = utils::readLittleEndian<int64_t>(current);
+            current += sizeof(int64_t);
+            
+            entry.MDFlags = utils::readLittleEndian<uint64_t>(current);
+            current += sizeof(uint64_t);
+
+            entry.MDFlags2 = utils::readLittleEndian<uint64_t>(current);
+            current += sizeof(uint64_t);
+
+            entry.MDEntryType = *current;
+            current += sizeof(char);
+
+            parsed.MDElements.push_back(entry);
+        }
+
+        m_firstUnprocessed += current - (m_data.Values.data() + m_firstUnprocessed);
+        parsedMessage = std::make_unique<sbe_parser::OrderBookSnapshot>(parsed);
         break;
     }
 

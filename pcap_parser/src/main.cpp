@@ -97,7 +97,8 @@ void BasicTesting()
 
 int main()
 {
-    ParserPCAP parser("./ignore/2023-10-09.1849-1906.pcap");
+    //ParserPCAP parser("./ignore/2023-10-09.1849-1906.pcap");
+    ParserPCAP parser("./ignore/2023-10-10.0845-0905.pcap");
     FileHeaderValues fileHeaderValues;
     auto rc = parser.ParseFileHeader(fileHeaderValues);
 
@@ -114,20 +115,42 @@ int main()
         data_parser::DataParser dataParser = data_parser::DataParser(fileHeaderValues, packetDataValues);
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
         auto rc = dataParser.ParseProtocolHeadersData(parsedProtocolData);
-        std::cout << rc << "\n";
-        std::unique_ptr<InrementalPacketMDUDPValues> MDValues = std::unique_ptr<InrementalPacketMDUDPValues>(dynamic_cast<InrementalPacketMDUDPValues*>(parsedProtocolData.release()));
-        if (!MDValues)
+        //std::cout << rc << "\n";
+        //std::unique_ptr<InrementalPacketMDUDPValues> MDValues = std::unique_ptr<InrementalPacketMDUDPValues>(dynamic_cast<InrementalPacketMDUDPValues*>(parsedProtocolData.release()));
+        std::unique_ptr<MarketDataUDPHeaderValues> MDValues = std::unique_ptr<MarketDataUDPHeaderValues>(dynamic_cast<MarketDataUDPHeaderValues*>(parsedProtocolData.release()));
+        if (MDValues)
         {
             // snapshot
+            std::cout << *MDValues.get();
+        
+            message::MessageHeaderValues parsedMessageHeader;
+            rc = dataParser.ParseMessageHeaderData(parsedMessageHeader);
+            if (parsedMessageHeader.TemplateID == 17)
+            {
+
+                std::cout << parsedMessageHeader;
+                std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+                rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderBookSnapshot);
+                std::cout  << rc << "\n";
+                std::unique_ptr<sbe_parser::OrderBookSnapshot> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderBookSnapshot>(dynamic_cast<sbe_parser::OrderBookSnapshot*>(parsedMessageData.release()));
+                std::cout << *orderExecuteMessage.get();
+                break;
+
+            }
             parser.ResetTokenizersTerminals();
             continue;
         }
-        std::cout << *MDValues.get();
+        else
+        {
+            parser.ResetTokenizersTerminals();
+            continue;
+        }
+        //std::cout << *MDValues.get();
         
         message::MessageHeaderValues parsedMessageHeader;
         rc = dataParser.ParseMessageHeaderData(parsedMessageHeader);
-        std::cout << rc << "\n";
-        if (parsedMessageHeader.TemplateID == 15) {
+        //std::cout << rc << "\n";
+        /*if (parsedMessageHeader.TemplateID == 15) {
             //std::cout << *MDValues.get();
 
             std::cout << parsedMessageHeader;
@@ -146,7 +169,18 @@ int main()
             std::cout  << rc << "\n";
             std::unique_ptr<sbe_parser::OrderExecutionMessage> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderExecutionMessage>(dynamic_cast<sbe_parser::OrderExecutionMessage*>(parsedMessageData.release()));
             std::cout << *orderExecuteMessage.get();
-        } 
+        } */
+        if (parsedMessageHeader.TemplateID == 17)
+        {
+
+            std::cout << parsedMessageHeader;
+            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderBookSnapshot);
+            std::cout  << rc << "\n";
+            std::unique_ptr<sbe_parser::OrderBookSnapshot> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderBookSnapshot>(dynamic_cast<sbe_parser::OrderBookSnapshot*>(parsedMessageData.release()));
+            std::cout << *orderExecuteMessage.get();
+            break;
+        }
         parser.ResetTokenizersTerminals();
         
     }
