@@ -52,9 +52,9 @@ public:
     {}
 
     int64_t MDEntryID = 0;
-    utils::Decimal<5> MDEntryPx = utils::Decimal<5>(0);
+    utils::Decimal<-5> MDEntryPx = utils::Decimal<-5>(0);
     int64_t MDEntrySize = 0;
-    utils::Decimal<5> LastPx = utils::Decimal<5>(0);
+    utils::Decimal<-5> LastPx = utils::Decimal<-5>(0);
     int64_t LastQty = 0;
     int64_t TradeID = 0;
     uint64_t MDFlags = 0;
@@ -97,7 +97,24 @@ public:
         return os;
     }
 };
-
+inline void to_json(nlohmann::json& j, const pcap_parser::data_parser::sbe_parser::OrderExecutionMessage& msg)
+{
+   j = nlohmann::json{
+        { "MessageType",     "OrderExecute"},
+        { "MDEntryID",      msg.MDEntryID },
+        { "MDEntryPx",      DecimalToString(msg.MDEntryPx) },
+        { "MDEntrySize",    msg.MDEntrySize },
+        { "LastPx",         DecimalToString(msg.LastPx) },
+        { "LastQty",        msg.LastQty },
+        { "TradeID",        msg.TradeID },
+        { "MDFlags",        msg.MDFlags },
+        { "MDFlags2",       msg.MDFlags2 },
+        { "SecurityID",     msg.SecurityID },
+        { "RptSeq",         msg.RptSeq },
+        { "MDUpdateAction", static_cast<unsigned>(msg.MDUpdateAction) },
+        { "MDEntryType",    std::string(1, msg.MDEntryType) }
+    };
+}
 } // namespace sbe_parser
 } // namespace data_parser
 } // namespace pcap_parser

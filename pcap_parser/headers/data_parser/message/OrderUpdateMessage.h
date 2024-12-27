@@ -42,7 +42,7 @@ public:
         MDEntryType(std::move(other.MDEntryType))
     {}
     int64_t MDEntryID = 0;
-    utils::Decimal<5> MDEntryPx = utils::Decimal<5>(0);
+    utils::Decimal<-5> MDEntryPx = utils::Decimal<-5>(0);
     int64_t MDEntrySize = 0;
     uint64_t MDFlags = 0;
     uint64_t MDFlags2 = 0;
@@ -69,6 +69,23 @@ public:
         return os;
     }
 };
+
+inline void to_json(nlohmann::json& j, const pcap_parser::data_parser::sbe_parser::OrderUpdateMessage& msg)
+{
+    j = nlohmann::json
+    {
+        { "MessageType",     "OrderUpdate"},
+        { "MDEntryID",       msg.MDEntryID },
+        { "MDEntryPx",       DecimalToString(msg.MDEntryPx) },
+        { "MDEntrySize",     msg.MDEntrySize },
+        { "MDFlags",         msg.MDFlags },
+        { "MDFlags2",        msg.MDFlags2 },
+        { "SecurityID",      msg.SecurityID },
+        { "RptSeq",          msg.RptSeq },
+        { "MDUpdateAction",  static_cast<unsigned>(msg.MDUpdateAction) },
+        { "MDEntryType",     std::string(1, msg.MDEntryType) }
+    };
+}
 
 } // namespace sbe_parser
 } // namespace data_parser

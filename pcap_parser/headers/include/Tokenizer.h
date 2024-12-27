@@ -7,7 +7,7 @@
 
 namespace pcap_parser
 {
-//TODO remove reader methods from tokenizer
+    
 class Tokenizer : BaseTokenizer
 {
 

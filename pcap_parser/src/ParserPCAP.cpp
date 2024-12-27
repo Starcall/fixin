@@ -57,11 +57,6 @@ ParserPCAP::ParserPCAP(std::string const &fileName) : m_fileName(fileName)
     m_packetHeaderTokenizer = PacketHeaderTokenizer(fileStream);
 }
 
-bool ParserPCAP::ParseToJson()
-{
-    return false;
-}
-
 void ParserPCAP::ResetTokenizersTerminals()
 {
     m_fileHeaderTokenizer.ResetTerminal();
@@ -128,7 +123,6 @@ bool ParserPCAP::ParseFileHeader(FileHeaderValues &parsedValues)
                 }
                 if (parsedValues.EndianType == enums::Endian::LittleEndian)
                 {
-                    // TODO double check how I receive versions
                     auto value = __builtin_bswap32(fileHeaderToken->m_tokenValue);
                     m_logger.log(Logger::LogLevel::Error, std::to_string(value));
                     

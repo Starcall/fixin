@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -g -Iheaders
+CXXFLAGS = -std=c++20 -Wall -Wextra -O3 -g -Iheaders
 
 SRCDIR = src
 BUILDDIR = build

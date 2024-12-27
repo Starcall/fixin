@@ -56,7 +56,7 @@ private:
     bool GetKBytes(uint32_t& value, size_t k)
     {
         value = 0;
-        if (k > 4 || (static_cast<int>(m_values.size()) - m_position < k)) 
+        if (k > 4 || m_values.size() < k + m_position)
         {
             return false;
         }

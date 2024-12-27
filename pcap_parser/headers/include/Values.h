@@ -6,8 +6,8 @@
 #include "iostream"
 
 #include "Enums.h"
-
-// TODO add namespaces
+#include "json.hpp"
+#include "../../utils/utils.hpp"
 
 namespace pcap_parser
 {
@@ -142,6 +142,47 @@ struct MarketDataUDPHeaderValues : public EthernetIPv4UDPHeaderValues
     {}
 
     virtual ~MarketDataUDPHeaderValues() {};
+
+    static void to_json(nlohmann::json& j, const MarketDataUDPHeaderValues& val)
+    {
+        j = nlohmann::json
+        {
+            {
+                "EthernetIPv4UDP", 
+                {
+                    {"DestinationMac", utils::MacToString(val.DestinationMac)},
+                    {"SourceMac",      utils::MacToString(val.SourceMac)},
+                    {"Type",           utils::TypeToHexString(val.Type)},
+                    {"ipv4HeaderValues", 
+                        {
+                            {"Version",       val.ipv4HeaderValues.Version},
+                            {"IHL",           val.ipv4HeaderValues.IHL},
+                            {"Protocol",      val.ipv4HeaderValues.Protocol},
+                            {"SourceIP",      utils::ipToDottedDecimal(val.ipv4HeaderValues.SourceIP)},
+                            {"DestinationIp", utils::ipToDottedDecimal(val.ipv4HeaderValues.DestinationIp)}
+                        }
+                    },
+                    {"udpValues", 
+                        {
+                            {"SourcePort",      val.udpValues.SourcePort},
+                            {"DestinationPort", val.udpValues.DestinationPort},
+                            {"Length",          val.udpValues.Length},
+                            {"Checksum",        val.udpValues.Checksum}
+                        }
+                    }
+                }
+            },
+            {"marketDataHeaderValues", 
+                {
+                    {"MsgSeqNum",   val.marketDataHeaderValues.MsgSeqNum},
+                    {"MsgSize",     val.marketDataHeaderValues.MsgSize},
+                    {"MsgFlags",    val.marketDataHeaderValues.MsgFlags},
+                    {"SendingTime", utils::nanosecondsToRealTime(val.marketDataHeaderValues.SendingTime)}
+                }
+            }
+        };
+    }
+
     MarketDataHeaderValues marketDataHeaderValues;
 };
 
@@ -155,7 +196,16 @@ struct InrementalPacketMDUDPValues : public MarketDataUDPHeaderValues
         : MarketDataUDPHeaderValues(other),
           incrementalPacketHeaderValues(other.incrementalPacketHeaderValues)
     {}
+    static void to_json(nlohmann::json& j, const InrementalPacketMDUDPValues& val)
+    {
+        MarketDataUDPHeaderValues::to_json(j, static_cast<const MarketDataUDPHeaderValues&>(val));
 
+        j["IncrementalPacketHeaderValues"] = 
+        {
+            {"TransactTime",            val.incrementalPacketHeaderValues.TransactTime},
+            {"ExchangeTradingSessionID", val.incrementalPacketHeaderValues.ExchangeTradingSessionID}
+        };
+    }
     virtual ~InrementalPacketMDUDPValues() {};
     IncrementalPacketHeaderValues incrementalPacketHeaderValues;
 };
@@ -170,6 +220,6 @@ struct MessageHeaderValues
     uint16_t SchemaID;
     uint16_t Version;
 };
-    
+
 } // namespace message
 } // namespace pcap_parser

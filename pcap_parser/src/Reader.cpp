@@ -9,7 +9,6 @@ Reader::Reader(std::shared_ptr<std::ifstream> fileStream) : m_stream(fileStream)
 
 bool Reader::PeekByte(Byte& byte) const
 {
-    // TODO is it really needed?
     if (!m_stream || !m_stream->is_open())
     {
         return false;

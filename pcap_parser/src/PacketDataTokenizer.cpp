@@ -16,7 +16,6 @@ namespace pcap_parser
         auto rc = m_reader.ReadBytes(m_length, dataToken.m_values);
         if (!rc)
         {
-            // TODO insert log
             return false;
         }
         token = std::make_unique<PacketDataToken>(dataToken);

@@ -5,10 +5,13 @@
 #include "ParserPCAP.h"
 #include "data_parser/DataParser.h"
 #include "include/Values.h"
+#include "include/json.hpp"
 
 using namespace pcap_parser;
 using namespace pcap_parser::data_parser;
 
+
+using json = nlohmann::json;
 
 void GenerateHexText(std::string const& filepath, std::vector<Byte> const& values)
 {
@@ -26,82 +29,104 @@ void GenerateHexText(std::string const& filepath, std::vector<Byte> const& value
     std::cout << "Hexadecimal data written to: " << filepath << std::endl;
 }
 
-void BasicTesting()
+json SerializePacketHeaders(std::unique_ptr<BasicProtocolValues> const& parsedProtocolData, enums::PacketType type)
 {
-// Reader Basic Test
+    json packet;
+    switch (type)
     {
-        GenerateHexText("./test/1024", {0x1, 0x0, 0x2, 0xF});
-        auto reader_stream = std::make_shared<std::ifstream>(std::ifstream("./test/1024"));
-        auto reader = Reader(reader_stream);
-        std::vector<Byte> values;
-        reader.ReadBytes(100, values);
-        Logger logger = Logger();
-        logger.log(Logger::LogLevel::Info, "main() ReaderTest " + std::to_string(values.size()));
-        for (size_t i = 0; i < values.size(); i++)
+        case enums::PacketType::Unrecognized:
         {
-            logger.log(Logger::LogLevel::Info, "main() ReaderTest " + std::to_string(values[i]));
+            assert(false);
+            break;
+        }
+        case enums::PacketType::Incremental:
+        {
+
+            auto incrementalMDValues = dynamic_cast<InrementalPacketMDUDPValues*>(parsedProtocolData.get());
+            if (incrementalMDValues)
+            {
+                InrementalPacketMDUDPValues::to_json(packet, *incrementalMDValues);
+            }
+            break;
+        }
+        case enums::PacketType::Snapshot:
+        {
+            auto MDValues = dynamic_cast<MarketDataUDPHeaderValues*>(parsedProtocolData.get());
+            if (MDValues)
+            {
+                MarketDataUDPHeaderValues::to_json(packet, *MDValues);
+            }
+            break;
         }
     }
-    // Tokenizer basic tests
-    {
+    return packet;
+} 
+json SerializePacket(std::unique_ptr<BasicProtocolValues> const& parsedProtocolData, enums::PacketType type, std::vector<std::unique_ptr<sbe_parser::BaseMessage>> const& messages, std::vector<enums::message::MessageType> const& messageTypes)
+{
+    json serializedJson = SerializePacketHeaders(parsedProtocolData, type);
+    assert(messages.size() == messageTypes.size());
 
-        auto tokenizerStream = std::make_shared<std::ifstream>(std::ifstream("./test/two_headers_and_some_data"));
-        FileHeaderTokenizer tokenizer = FileHeaderTokenizer(tokenizerStream);
-        Logger logger = Logger();
-        while (!tokenizer.IsLastToken())
+    json serializedMessages = json::array();
+    for (size_t i = 0; i < messages.size(); i++)
+    {
+        auto messageType = messageTypes[i];
+        auto const& message = messages[i];
+        switch(messageType)
         {
-            std::unique_ptr<BaseToken> token;
-            auto rc = tokenizer.ReadToken(token); 
-            logger.log(Logger::LogLevel::Info, "main() TokenizerTest rc =  " + std::to_string(rc));
-            FileHeaderToken fileHeaderToken = *dynamic_cast<FileHeaderToken*>(token.get());
-            logger.log(Logger::LogLevel::Info, "main() TokenizerTest identity =  " + 
-                std::to_string(fileHeaderToken.m_tokenIdentity));
-            logger.log(Logger::LogLevel::Info, "main() TokenizerTest value =  " + 
-                std::to_string(fileHeaderToken.m_tokenValue));
-        }
-        int dataSize = 0;
-        PacketHeaderTokenizer packetTokenizer = PacketHeaderTokenizer(tokenizerStream);
-        while (!packetTokenizer.IsLastToken())
-        {
-            std::unique_ptr<BaseToken> token;
-            auto rc = packetTokenizer.ReadToken(token); 
-            if (!rc)
+            case enums::message::MessageType::Unsupported:
             {
+                serializedMessages.push_back("Unsupported message");
                 break;
             }
-            logger.log(Logger::LogLevel::Info, "main() packetTokenizerTest rc =  " + std::to_string(rc));
-            PacketHeaderToken packetToken = *dynamic_cast<PacketHeaderToken*>(token.get());
-            logger.log(Logger::LogLevel::Info, "main() packetTokenizerTest identity =  " + 
-                std::to_string(packetToken.m_tokenIdentity));
-            logger.log(Logger::LogLevel::Info, "main() packetTokenizerTest value =  " + 
-                std::to_string(packetToken.m_tokenValue));
-            if (packetToken.m_tokenIdentity == enums::CapturedLength)
+            case enums::message::MessageType::OrderUpdate:
             {
-                dataSize = __builtin_bswap32(packetToken.m_tokenValue);
-                logger.log(Logger::LogLevel::Info, "data size is : " + std::to_string(dataSize));
+                auto orderUpdateMessage = dynamic_cast<const sbe_parser::OrderUpdateMessage*>(message.get());
+                assert(orderUpdateMessage);
+                serializedMessages.push_back(*orderUpdateMessage);
+                break;
+            }
+            case enums::message::MessageType::OrderExecution:
+            {
+                auto orderExecutionMessage = dynamic_cast<const sbe_parser::OrderExecutionMessage*>(message.get());
+                assert(orderExecutionMessage);
+                serializedMessages.push_back(*orderExecutionMessage);
+                break;
+            }
+            case enums::message::MessageType::OrderBookSnapshot:
+            {
+                auto orderBookSnapshotMessage = dynamic_cast<const sbe_parser::OrderBookSnapshot*>(message.get());
+                assert(orderBookSnapshotMessage);
+                serializedMessages.push_back(*orderBookSnapshotMessage);
+                break;
             }
         }
-        PacketDataTokenizer dataTokenizer = PacketDataTokenizer(tokenizerStream);
-        dataTokenizer.SetDataLength(dataSize);
-        std::unique_ptr<BaseToken> token;
-        auto rc = dataTokenizer.ReadToken(token);
-        logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest rc =  " + std::to_string(rc));
-        PacketDataToken dataToken = *dynamic_cast<PacketDataToken*>(token.get());
-        for (auto value : dataToken.m_values)
-        {
-            logger.log(Logger::LogLevel::Info, "main() dataTokenizerTest value = " + std::to_string(value));
-        }
-        
     }
+    serializedJson["Messages"] = serializedMessages;
+    return serializedJson;
 }
 
-int main()
+void print_usage()
 {
-    //ParserPCAP parser("./ignore/2023-10-09.1849-1906.pcap");
-    ParserPCAP parser("./ignore/2023-10-10.0845-0905.pcap");
+    std::cout << "./parser_pcap <input_file.pcap> <output_file>";
+};
+
+int main(int argc, char** argv)
+{
+    if (argc < 3)
+    {
+        print_usage();
+        return 0;
+    }
+
+    ParserPCAP parser(argv[1]);
+    std::ofstream outFile(argv[2]);
+    // diagnostic
+    auto start = std::chrono::high_resolution_clock::now();
+    size_t packetNums = 0;
+    size_t failedMessages = 0;
+
     FileHeaderValues fileHeaderValues;
     auto rc = parser.ParseFileHeader(fileHeaderValues);
-
     if (rc)
     {
         std::cout << fileHeaderValues;
@@ -109,80 +134,74 @@ int main()
     PacketHeaderValues packetHeaderValues;
     while (parser.ParsePacketHeader(packetHeaderValues, fileHeaderValues))
     {
+        packetNums++;
         PacketDataValues packetDataValues;
         auto s = parser.ParsePacketData(packetDataValues, packetHeaderValues, fileHeaderValues);
-        //std::cout << packetDataValues;
         data_parser::DataParser dataParser = data_parser::DataParser(fileHeaderValues, packetDataValues);
         std::unique_ptr<BasicProtocolValues> parsedProtocolData;
-        auto rc = dataParser.ParseProtocolHeadersData(parsedProtocolData);
-        //std::cout << rc << "\n";
-        //std::unique_ptr<InrementalPacketMDUDPValues> MDValues = std::unique_ptr<InrementalPacketMDUDPValues>(dynamic_cast<InrementalPacketMDUDPValues*>(parsedProtocolData.release()));
-        std::unique_ptr<MarketDataUDPHeaderValues> MDValues = std::unique_ptr<MarketDataUDPHeaderValues>(dynamic_cast<MarketDataUDPHeaderValues*>(parsedProtocolData.release()));
-        if (MDValues)
+        auto type = dataParser.ParseProtocolHeadersData(parsedProtocolData);
+
+
+        std::vector<std::unique_ptr<sbe_parser::BaseMessage>> messages;
+        std::vector<enums::message::MessageType> messageTypes;
+        auto getMessageType = [](int msgNum) -> enums::message::MessageType {
+            switch(msgNum)
+            {
+                case 15:
+                {
+                    return enums::message::MessageType::OrderUpdate;
+                }
+                case 16:
+                {
+                    return enums::message::MessageType::OrderExecution;
+                }
+                case 17:
+                {
+                    return enums::message::MessageType::OrderBookSnapshot;
+                }
+                default:
+                {
+                    return enums::message::MessageType::Unsupported;
+                }
+            }
+        };
+
+        if (type == enums::PacketType::Incremental)
         {
-            // snapshot
-            std::cout << *MDValues.get();
-        
+            message::MessageHeaderValues parsedMessageHeader;
+            while(dataParser.ParseMessageHeaderData(parsedMessageHeader))
+            {
+                std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+                rc = dataParser.ParseMessageData(parsedMessageData, getMessageType(parsedMessageHeader.TemplateID));
+                if (!rc && getMessageType(parsedMessageHeader.TemplateID) != enums::message::MessageType::Unsupported)
+                {
+                    failedMessages++;
+                    std::cout << "Failed to parse known message. " << " skipping it.\n";
+                    continue;
+                }
+                messageTypes.push_back(getMessageType(parsedMessageHeader.TemplateID));
+                messages.push_back(std::move(parsedMessageData));
+            }
+        }
+        if (type == enums::PacketType::Snapshot)
+        {
             message::MessageHeaderValues parsedMessageHeader;
             rc = dataParser.ParseMessageHeaderData(parsedMessageHeader);
-            if (parsedMessageHeader.TemplateID == 17)
+            if (!rc)
             {
-
-                std::cout << parsedMessageHeader;
-                std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
-                rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderBookSnapshot);
-                std::cout  << rc << "\n";
-                std::unique_ptr<sbe_parser::OrderBookSnapshot> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderBookSnapshot>(dynamic_cast<sbe_parser::OrderBookSnapshot*>(parsedMessageData.release()));
-                std::cout << *orderExecuteMessage.get();
-                break;
-
+                std::cout << "Failed to parse message header";
             }
-            parser.ResetTokenizersTerminals();
-            continue;
+            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
+            rc = dataParser.ParseMessageData(parsedMessageData, getMessageType(parsedMessageHeader.TemplateID));
+            messageTypes.push_back(getMessageType(parsedMessageHeader.TemplateID));
+            messages.push_back(std::move(parsedMessageData));  
         }
-        else
-        {
-            parser.ResetTokenizersTerminals();
-            continue;
-        }
-        //std::cout << *MDValues.get();
+        auto json = SerializePacket(parsedProtocolData, type, messages, messageTypes);
         
-        message::MessageHeaderValues parsedMessageHeader;
-        rc = dataParser.ParseMessageHeaderData(parsedMessageHeader);
-        //std::cout << rc << "\n";
-        /*if (parsedMessageHeader.TemplateID == 15) {
-            //std::cout << *MDValues.get();
-
-            std::cout << parsedMessageHeader;
-            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
-            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderUpdate);
-            std::cout  << rc << "\n";
-            std::unique_ptr<sbe_parser::OrderUpdateMessage> orderUpdateMessage = std::unique_ptr<sbe_parser::OrderUpdateMessage>(dynamic_cast<sbe_parser::OrderUpdateMessage*>(parsedMessageData.release()));
-            std::cout << *orderUpdateMessage.get();
-        }
-        if (parsedMessageHeader.TemplateID == 16) {
-            //std::cout << *MDValues.get();
-
-            std::cout << parsedMessageHeader;
-            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
-            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderExecution);
-            std::cout  << rc << "\n";
-            std::unique_ptr<sbe_parser::OrderExecutionMessage> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderExecutionMessage>(dynamic_cast<sbe_parser::OrderExecutionMessage*>(parsedMessageData.release()));
-            std::cout << *orderExecuteMessage.get();
-        } */
-        if (parsedMessageHeader.TemplateID == 17)
-        {
-
-            std::cout << parsedMessageHeader;
-            std::unique_ptr<sbe_parser::BaseMessage> parsedMessageData = std::make_unique<sbe_parser::BaseMessage>(parsedMessageHeader);
-            rc = dataParser.ParseMessageData(parsedMessageData, enums::message::MessageType::OrderBookSnapshot);
-            std::cout  << rc << "\n";
-            std::unique_ptr<sbe_parser::OrderBookSnapshot> orderExecuteMessage = std::unique_ptr<sbe_parser::OrderBookSnapshot>(dynamic_cast<sbe_parser::OrderBookSnapshot*>(parsedMessageData.release()));
-            std::cout << *orderExecuteMessage.get();
-            break;
-        }
+        outFile << json.dump(2) << std::endl;
         parser.ResetTokenizersTerminals();
-        
     }
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count();
+    std::cout << "Elapsed: " << elapsedTime << " ms.\n" << "Number of packets parsed: " << packetNums << std::endl << "Average time on packet: " << elapsedTime * 1.0 / packetNums << " ms.\n Failed to parse " << failedMessages << " messages.";
     return 0;
 }

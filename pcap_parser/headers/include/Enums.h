@@ -1,9 +1,6 @@
 #pragma once
 #include <cstdlib>
 
-
-// TODO add namespaces
-
 namespace pcap_parser
 {
 
@@ -103,6 +100,14 @@ enum ValueStatus
     NothingToRead,
     Tail
 };
+
+enum PacketType
+{
+    Incremental,
+    Snapshot,
+    Unrecognized
+};
+
 namespace message
 {
 

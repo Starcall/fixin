@@ -39,7 +39,15 @@ private:
     bool m_isNull;
 };
 
-inline std::string nanosecondsToRealTime(uint64_t nanoseconds) {
+inline std::string DecimalToString(const utils::Decimal<-5>& dec)
+{
+    std::ostringstream oss;
+    oss << dec;
+    return oss.str();
+}
+
+inline std::string nanosecondsToRealTime(uint64_t nanoseconds) 
+{
     time_t seconds = nanoseconds / 1'000'000'000;
     uint64_t remainingNanoseconds = nanoseconds % 1'000'000'000;
 
@@ -49,7 +57,8 @@ inline std::string nanosecondsToRealTime(uint64_t nanoseconds) {
 
     return oss.str();
 }   
-inline std::string ipToDottedDecimal(uint32_t ip) {
+inline std::string ipToDottedDecimal(uint32_t ip) 
+{
     uint8_t b4 = (ip & 0xFF);
     uint8_t b3 = ((ip >> 8) & 0xFF);
     uint8_t b2 = ((ip >> 16) & 0xFF);
@@ -59,10 +68,32 @@ inline std::string ipToDottedDecimal(uint32_t ip) {
     return oss.str();
 }
 
+inline std::string MacToString(std::array<uint8_t, 6> const& mac)
+{
+    std::ostringstream oss;
+    for (size_t i = 0; i < mac.size(); ++i) 
+    {
+        if (i > 0) oss << ":";
+        oss << std::hex << std::setw(2) << std::setfill('0') << (unsigned)mac[i];
+    }
+    return oss.str();
+}
+
+inline std::string TypeToHexString(uint16_t typeValue)
+{
+    std::ostringstream oss;
+    oss << "0x"
+        << std::hex << std::setw(4) << std::setfill('0')
+        << static_cast<unsigned>(typeValue);
+    return oss.str();
+}
+
 template <typename T>
-inline T readLittleEndian(const uint8_t* data) {
+inline T readLittleEndian(const uint8_t* data) 
+{
     T value = 0;
-    for (size_t i = 0; i < sizeof(T); i++) {
+    for (size_t i = 0; i < sizeof(T); i++)
+     {
         value |= static_cast<T>(data[i]) << (i * 8);
     }
     return value;

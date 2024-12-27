@@ -2,6 +2,7 @@
 
 #include "include/Enums.h"
 #include "include/Values.h"
+#include "../../../utils/utils.hpp"
 
 namespace pcap_parser
 {

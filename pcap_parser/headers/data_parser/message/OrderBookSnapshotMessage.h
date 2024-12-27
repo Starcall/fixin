@@ -49,7 +49,7 @@ public:
     struct MarketDataEntry {
         int64_t MDEntryID = 0;
         uint64_t TransactTime = 0;
-        utils::Decimal<5> MDEntryPx = utils::Decimal<5>(0);
+        utils::Decimal<-5> MDEntryPx = utils::Decimal<-5>(0);
         int64_t MDEntrySize = 0;
         uint64_t MDFlags = 0;
         uint64_t MDFlags2 = 0;
@@ -103,6 +103,35 @@ public:
         return os;
     }
 };
+
+inline void to_json(nlohmann::json& j, const pcap_parser::data_parser::sbe_parser::OrderBookSnapshot& snapshot)
+{
+    j = nlohmann::json{
+        { "MessageType",               "OrderBookSnapshot"},
+        { "SecurityID",                snapshot.SecurityID },
+        { "LastMsgSeqNumProcessed",    snapshot.LastMsgSeqNumProcessed },
+        { "RptSeq",                    snapshot.RptSeq },
+        { "ExchangeTradingSessionID",  snapshot.ExchangeTradingSessionID },
+        { "NoMDEntries",               snapshot.NoMDEntries }
+    };
+    nlohmann::json mdElementsArray = nlohmann::json::array();
+    for (auto const& entry : snapshot.MDElements)
+    {
+        nlohmann::json oneEntry =
+        {
+            { "MDEntryID",    entry.MDEntryID },
+            { "TransactTime", utils::nanosecondsToRealTime(entry.TransactTime) },
+            { "MDEntryPx",    DecimalToString(entry.MDEntryPx) },
+            { "MDEntrySize",  entry.MDEntrySize },
+            { "MDFlags",      entry.MDFlags },
+            { "MDFlags2",     entry.MDFlags2 },
+            { "TradeID",      entry.TradeID },
+            { "MDEntryType",  std::string(1, entry.MDEntryType) }
+        };
+        mdElementsArray.push_back(oneEntry);
+    }
+    j["MDElements"] = std::move(mdElementsArray);
+}
 
 } // namespace sbe_parser
 } // namespace data_parser

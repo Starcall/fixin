@@ -110,9 +110,8 @@ std::ostream& operator<<(std::ostream& os, const message::MessageHeaderValues& h
     return os;
 }
 
-bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues)
+enums::PacketType DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues)
 {
-    // TODO log
     switch (m_fileMetadata.LinkType)
     {
         case 1:
@@ -121,7 +120,7 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
             auto rc = ParseEthernetProtocolHeader(parsedDataValues);
             if (!rc)
             {
-                return false;
+                return enums::PacketType::Unrecognized;
             }
             // IPv4
             if (parsedDataValues.Type == 0x0800)
@@ -132,7 +131,7 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                 rc = ParseIPv4ProtocolHeader(parsedIPv4Headervalues);
                 if (!rc)
                 {
-                    return false;
+                    return enums::PacketType::Unrecognized;
                 }
 
                 parsedIPv4Values.ipv4HeaderValues = parsedIPv4Headervalues;
@@ -146,7 +145,7 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                     rc = ParseUDPHeader(parsedUDPHeaderValues);
                     if (!rc)
                     {
-                        return false;
+                        return enums::PacketType::Unrecognized;
                     }       
                     parsedMDUDPValues.udpValues = parsedUDPHeaderValues;
 
@@ -155,7 +154,7 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                     rc = ParseMarketDataHeader(parsedMDH);
                     if (!rc)
                     {
-                        return false;
+                        return enums::PacketType::Unrecognized;
                     }
                     parsedMDUDPValues.marketDataHeaderValues = parsedMDH;
 
@@ -168,35 +167,35 @@ bool DataParser::ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &
                         rc = ParseIncrementalPacketHeader(parsedIncrementalPacketHeaderValues);
                         if (!rc)
                         {
-                            return false;
+                            return enums::PacketType::Unrecognized;
                         }      
                         parsedInrementalPacketMDUDPValues.incrementalPacketHeaderValues = parsedIncrementalPacketHeaderValues;
                         parsedValues = std::make_unique<InrementalPacketMDUDPValues>(parsedInrementalPacketMDUDPValues);
+                        return enums::PacketType::Incremental;
                     }
                     else
                     {
                         // Snapshot Packet
                         parsedValues = std::make_unique<MarketDataUDPHeaderValues>(parsedMDUDPValues);
+                        return enums::PacketType::Snapshot;
                     }
-                    return true;
                 }
                 else
                 {
                     // NOT IMPLEMENTED
-                    return false;
+                    return enums::PacketType::Unrecognized;
                 }
             }
             else    
             {
                 // NOT IMPLEMENTED
-                return false;
+                return enums::PacketType::Unrecognized;
             }
-            return true;
         }
         default:
         {
             // NOT IMPLEMENTED
-            return false;
+            return enums::PacketType::Unrecognized;
         }
     }
 
@@ -270,10 +269,12 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
         }
         if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
         {
+            m_firstUnprocessed = m_data.Values.size();
             return false;
         }
         if (parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderUpdateMessage::GetDataSizeInBytes())
         {
+            m_firstUnprocessed += parsedMessage->m_SBEHeader.BlockLength;
             return false;
         }
         sbe_parser::OrderUpdateMessage parsed(parsedMessage->m_SBEHeader);
@@ -319,12 +320,14 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
         }
         if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
         {
+            m_firstUnprocessed += m_data.Values.size();
             return false;
         }
         if (parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytes()
             && parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytesTechincalTrades()
             && parsedMessage->m_SBEHeader.BlockLength != sbe_parser::OrderExecutionMessage::GetDataSizeInBytesTechincalTradesWithoutNull())
         {
+            m_firstUnprocessed += parsedMessage->m_SBEHeader.BlockLength;
             return false;
         }
         sbe_parser::OrderExecutionMessage parsed(parsedMessage->m_SBEHeader);
@@ -341,7 +344,7 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
         }
         else
         {
-            parsed.MDEntryPx.setMantissa(utils::Decimal<5>::getNullValue());
+            parsed.MDEntryPx.setMantissa(utils::Decimal<-5>::getNullValue());
         }
 
         if (parsedMessage->m_SBEHeader.BlockLength == sbe_parser::OrderExecutionMessage::GetDataSizeInBytes())
@@ -396,11 +399,13 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
 
         if (m_firstUnprocessed + parsedMessage->m_SBEHeader.BlockLength > m_data.Values.size())
         {
+            m_firstUnprocessed += m_data.Values.size();
             return false;
         }
 
         if (parsedMessage->m_SBEHeader.BlockLength < sbe_parser::OrderBookSnapshot::GetDataSizeInBytes())
         {
+            m_firstUnprocessed += parsedMessage->m_SBEHeader.BlockLength;
             return false;
         }
 
@@ -479,7 +484,6 @@ bool DataParser::ParseMessageData(std::unique_ptr<sbe_parser::BaseMessage>& pars
 
 bool DataParser::ParseEthernetProtocolHeader(EthernetHeaderValues &parsedValues)
 {
-    // TODO add log
     EthernetHeaderTokenizer headerTokenizer = EthernetHeaderTokenizer(m_data.Values);
     while (!headerTokenizer.IsLastToken())
     {

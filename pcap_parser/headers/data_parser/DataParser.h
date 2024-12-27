@@ -18,7 +18,7 @@ namespace pcap_parser
 {
 namespace data_parser
 {
-
+// For quick debug
 std::ostream& operator<<(std::ostream& os, const EthernetHeaderValues& data);
 std::ostream& operator<<(std::ostream& os, const IPv4HeaderValues& ipv4);
 std::ostream& operator<<(std::ostream& os, const EthernetIPv4HeaderValues& eth_ipv4);
@@ -29,6 +29,7 @@ std::ostream& operator<<(std::ostream& os, const MarketDataUDPHeaderValues& md);
 std::ostream& operator<<(std::ostream& os, const IncrementalPacketHeaderValues& values);
 std::ostream& operator<<(std::ostream& os, const InrementalPacketMDUDPValues& values);
 std::ostream& operator<<(std::ostream& os, const message::MessageHeaderValues& header);
+
 class DataParser
 {
 public:
@@ -40,7 +41,7 @@ public:
     /*
     * @param parsedValues pointer to struct that will hold parsed values
     */
-    bool ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues);
+    enums::PacketType ParseProtocolHeadersData(std::unique_ptr<BasicProtocolValues> &parsedValues);
 
     /*
     * @param parsedValues struct with message header values

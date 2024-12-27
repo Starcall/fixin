@@ -18,11 +18,9 @@ class ParserPCAP
 public:
     ParserPCAP(std::string const& fileName);
 
-    bool ParseToJson();
-
     void ResetTokenizersTerminals();
-// TODO MAKE PRIVATE
-public:
+
+    // Maybe make it private
     bool ParseFileHeader(FileHeaderValues &parsedValues);
     bool ParsePacketHeader(PacketHeaderValues &parsedValues, FileHeaderValues const& metadata);
     bool ParsePacketData(PacketDataValues &parsedValues, PacketHeaderValues const& packetMetadata, FileHeaderValues const& fileMetadata);
